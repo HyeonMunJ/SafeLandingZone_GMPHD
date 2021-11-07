@@ -136,9 +136,14 @@ g.gmm
 		self.r = array(r, dtype=myfloat)   # observation noise covariance (R_k in paper)
 		self.clutter = myfloat(clutter)   # clutter intensity (KAU in paper)
 
+		self.pos_now = [0., 0.]
+		self.pos_prev = [0., 0.]
+
 		self.birth_weight = 1e-2
 
 	def meas_classification(self, gmm_set, obs_set, F, H):
+		# considering the mahalanobis distance between measurements and predicted target states,
+		# classify measurements into meas from birth targets and meas from surviving targets
 		obs_b = []
 		obs_s = []
 		T_s = 1e-1 # threshold 
@@ -152,28 +157,47 @@ g.gmm
 					obs_s.append(obs)
 		
 		return obs_b, obs_s
-            
-	def update(self, obs, f):
+
+
+	def update(self, obs, f, pose, edge):
 		"""Run a single GM-PHD step given a new frame of observations.
 		  'obs' is an array (a set) of this frame's observations.
 		  Based on Table 1 from Vo and Ma paper."""
 		self.f = array(f, dtype=myfloat)
+		
+		'''
 		#######################################
 		# Step 1 - prediction for birth targets
 		# born = [deepcopy(comp) for comp in self.birthgmm]
 		# random_birth = obs[random.choice((len(obs)))]
 		# born = [deepcopy(comp) for comp in birthgmm] # assume the probability density of the birth intensity is uniformly distributed
-		obs_birth, obs_surv = self.meas_classification(self.gmm, obs, self.f, self.h)
 		born = [GmphdComponent(                        \
 					self.birth_weight,          \
 					comp,                \
 					self.q   \
 			) for comp in obs_birth]
 		# born = []
+		'''
 
-		# The original paper would do a spawning iteration as part of Step 1.
-		spawned = []    # safe landing zone is not spawned
-		
+		#######################################
+		# randomly chosen variables
+
+		self.pos_prev = self.pos_now
+		self.pos_now = [pose[0], pose[1]]
+
+		N_min, N_max, E_min, E_max = edge[0], edge[1], edge[2], edge[3] # max N and E position of meas. at the previous time
+		N_diff, E_diff = self.pos_now[0] - self.pos_prev[0], self.pos_now[1] - self.pos_prev[1] # N and E movement of UAV
+		N_max_k, N_min_k,E_max_k, E_min_k = N_max + N_diff, N_min + N_diff, E_max + E_diff, E_min + E_diff
+
+		N_length, E_length = abs(N_max_k - N_min_k), abs(E_max_k - E_min_k)
+		V_A = (E_length - E_diff) * (N_length - N_diff)
+		V_B = N_diff * E_length + E_diff * N_length - E_diff * N_diff
+
+		weight_A, weight_B = 1e-2, 1e-1
+
+		pkk_b = pkk
+
+
 		#######################################
 		# Step 2 - prediction for existing targets
 
@@ -185,6 +209,18 @@ g.gmm
 	
 		# predicted = born + spawned + updated
 		predicted = updated
+
+		######################################
+		# measurement classification
+		obs_birth, obs_surv = self.meas_classification(self.gmm, obs, self.f, self.h)		
+
+		obs_A = []
+		obs_B = []
+		for obs in obs_birth:
+			if N_min <= obs[0] <= N_max or E_min <= obs[1] <= E_max:
+				obs_A.append(obs)
+			else:
+				obs_B.append(obs)
 
 		#######################################
 		# Step 3 - construction of PHD update components
@@ -198,7 +234,7 @@ g.gmm
 						for index, comp in enumerate(predicted)]
 
 		#######################################
-		# Step 4 - update using observations
+		# Step 4-1 - update states of surviving targets using observations
 		# The 'predicted' components are kept, with a decay
 		newgmm = [GmphdComponent(comp.weight * (1.0 - self.detection), comp.loc, comp.cov) for comp in predicted]
 
@@ -218,14 +254,72 @@ g.gmm
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in newgmmpartial)
-			reweighter = 1.0 / (self.clutter + weightsum)
+			reweighter = 1.0 / (self.clutter + weightsum + V_A/weight_A + V_B/weight_B)
 			for newcomp in newgmmpartial:
 				newcomp.weight *= reweighter
 
 			newgmm.extend(newgmmpartial)
+
+		########################################
+		# Step 4-2 - generate states of birth targets using observations
+
+		for anobs in obs_A:
+			anobs = array(anobs)
+			newgmmpartial = []
+			gaussianpartial = []
+			for j, comp in enumerate(predicted):
+				anobs = reshape(anobs, (size(anobs),1))
+
+				gaussianpartial.append(GmphdComponent(          \
+						self.detection * comp.weight          \
+							* dmvnorm(nu[j], s[j], anobs),    \
+						comp.loc + dot(k[j], anobs - nu[j]),  \
+						pkk[j]                                \
+						))
+
+				newgmmpartial.append(GmphdComponent(          \
+						weight_A / V_A,    \
+						linalg.inv(self.h) * anobs),  \
+						pkk_b[j]                                \
+						))
 	
+			# The Kappa thing (clutter and reweight)
+			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
+			reweighter = 1.0 / (self.clutter + weightsum + V_A/weight_A + V_B/weight_B)
+			for newcomp in newgmmpartial:
+				newcomp.weight *= reweighter
+
+			newgmm.extend(newgmmpartial)
+
+		for anobs in obs_B:
+			anobs = array(anobs)
+			newgmmpartial = []
+			gaussianpartial = []
+			for j, comp in enumerate(predicted):
+				anobs = reshape(anobs, (size(anobs),1))
+
+				gaussianpartial.append(GmphdComponent(          \
+						self.detection * comp.weight          \
+							* dmvnorm(nu[j], s[j], anobs),    \
+						comp.loc + dot(k[j], anobs - nu[j]),  \
+						pkk[j]                                \
+						))
+
+				newgmmpartial.append(GmphdComponent(          \
+						weight_B / V_B,    \
+						linalg.inv(self.h) * anobs,  \
+						pkk_b[j]                                \
+						))
+	
+			# The Kappa thing (clutter and reweight)
+			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
+			reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
+			for newcomp in newgmmpartial:
+				newcomp.weight *= reweighter
+
+			newgmm.extend(newgmmpartial)		
+
 		self.gmm = newgmm
-		self.gmm.extend(born)
 
 	def prune(self, truncthresh=1e-10, mergethresh=0.2, maxcomponents=100):
 		"""Prune the GMM. Alters model state.

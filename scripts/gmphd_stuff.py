@@ -32,11 +32,11 @@ def calc_score(weight, loc):
         print('loc is empty')
     return score
 
-def updateandprune(g, obsset, dt):
+def updateandprune(g, obsset, dt, pose, edge):
     f = create_F(dt)
     print("-------------------------------------------------------------------")
     # update GM-PHD
-    g.update(obsset, f) 
+    g.update(obsset, f, pose, edge) 
     # merge similar components and prune the components with low weight
     g.prune(maxcomponents=50, mergethresh=0.5) 
     return g

@@ -18,6 +18,7 @@ class Pcd_2_array:
         # rospy.Subscriber("point_cloud_transformed", PointCloud2, self.test)
         rospy.Subscriber("/camera/depth/points", PointCloud2, self.test)
         self.pub_slz = rospy.Publisher('/custom/slz_point/states', Float32MultiArray, queue_size=2)
+        self.pub_edge = rospy.Publisher('/custom/slz_point/edge', Float32MultiArray, queue_size=2)
 
         self.i = 0
         self.DUMMY_FIELD_PREFIX = DUMMY_FIELD_PREFIX
@@ -38,7 +39,6 @@ class Pcd_2_array:
 
             # pcd array has the information of RGBD
             self.slz_detection.det_SLZ(pcd_array[:,:,:3])
-
             state_slz = self.slz_detection.best_SLZ
 
             # dr_2 = '/home/lics-hm/Documents/data/slz_pcd/state_slz_%d' % self.i
@@ -47,8 +47,9 @@ class Pcd_2_array:
             print('num of slz : ', len(state_slz))
             if len(state_slz):
                 msg_slz = self.assign_state_slz(state_slz)
+                msg_edge = self.assign_state_edge(self.slz_detection.image_region)
                 self.pub_slz.publish(msg_slz)
-
+                self.pub_edge.publish(msg_edge)
         self.i += 1
 
     # converts_to_numpy(PointField, plural=True)
@@ -119,6 +120,11 @@ class Pcd_2_array:
         '''
         return msg
 
+    def assign_state_edge(self, edge):
+        msg = Float32MultiArray()
+        msg.data = edge
+
+        return msg
 
 # __docformat__ = "restructurednpyext en"
 

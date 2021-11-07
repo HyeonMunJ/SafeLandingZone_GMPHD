@@ -23,6 +23,8 @@ class SLZ_detection:
         self.i = 0
         self.best_SLZ = None
 
+        self.edge_region = [0., 0., 0., 0.]
+
     def save_depth_image(self, data):
         self.image = data
         if self.i % 10:
@@ -192,6 +194,7 @@ class SLZ_detection:
             return bool_sub_SLZ, plane_time, alpha, sum_error
 
     def det_SLZ(self, image):
+        self.image_region = self.find_region(image)
         # output: coordinates of SLZ and shape, extension
         list_SLZ = []
         
@@ -244,3 +247,10 @@ class SLZ_detection:
         self.best_SLZ = state_vector
 
 
+    def find_region(self, us_image):
+        x_min = min(min(us_image[:, 0, 0]), min(us_image[0, :, 0]))
+        y_min = min(min(us_image[:, 0, 1]), min(us_image[0, :, 1]))
+        x_max = max(max(us_image[:, 0, 0]), max(us_image[0, :, 0]))
+        y_max = max(max(us_image[:, 0, 1]), max(us_image[0, :, 1]))
+
+        return [x_min, x_max, y_min, y_max]

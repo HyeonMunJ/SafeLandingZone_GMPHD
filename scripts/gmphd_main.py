@@ -28,12 +28,14 @@ class Main_GMPHD:
         self.pos = [0., 0., 0.] # position of ownship (NEU?)
         self.vel = [0., 0., 0.] # velocity of ownship (NEU?)
         self.att = [0., 0., 0.] # attitude of ownship (rpy)
+        self.edge = [0., 0., 0., 0.] # [x_min, x_max, y_min, y_max]
 
         rospy.Subscriber("custom/slz_point/states", Float32MultiArray, self.save_slz)
         rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.save_pose)
         rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, self.save_vel)
         rospy.Subscriber("/custom/flag_main", Bool, self.save_flag_main)
         rospy.Subscriber("/custom/flag_score", Bool, self.save_flag_score)
+        rospy.Sybscriber("custom/slz_point/edge", Float32MultiArray, self.save_edge)
 
         self.pub_gmphd = rospy.Publisher('/custom/gmphd/result', Float32MultiArray, queue_size=2)
         self.pub_gmphd_flag = rospy.Publisher('/custom/flag_phd', Bool, queue_size=2)
@@ -41,6 +43,8 @@ class Main_GMPHD:
     ######################################################################################################
     ##################################### Callback for subscribe #########################################
     ######################################################################################################
+    def save_edge(self, msg):
+        self.edge = msg.data # [x_min, x_max, y_min, y_max]
 
     def save_slz(self, msg):
         msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/6, 6))
@@ -64,6 +68,7 @@ class Main_GMPHD:
         quaternion_list = [qx, qy, qz, qw]
         self.pos = [x, y, z]
         (self.att[0], self.att[1], self.att[2]) = euler_from_quaternion(quaternion_list)
+
 
     def save_vel(self, msg):
         vx = msg.twist.linear.x
@@ -115,7 +120,7 @@ class Main_GMPHD:
             else:
                 self.flag_slz = False
             # predict -> update -> merge -> prune
-            self.g = updateandprune(self.g, self.slz_state, dt)
+            self.g = updateandprune(self.g, self.slz_state, dt, self.pos, self.edge)
             # extract a state which has max. weight from weight distribution of gm-phd components
             est_state, weight = self.g.extractstatesmax()
             print('est_state: ', est_state)
