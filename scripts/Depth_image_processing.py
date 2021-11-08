@@ -248,9 +248,9 @@ class SLZ_detection:
 
 
     def find_region(self, us_image):
-        x_min = min(min(us_image[:, 0, 0]), min(us_image[0, :, 0]))
-        y_min = min(min(us_image[:, 0, 1]), min(us_image[0, :, 1]))
-        x_max = max(max(us_image[:, 0, 0]), max(us_image[0, :, 0]))
-        y_max = max(max(us_image[:, 0, 1]), max(us_image[0, :, 1]))
+        x_min = min(min(us_image[:, 0, 0]), min(us_image[0, :, 0]), min(us_image[:, -1, 0]), min(us_image[-1, :, 0]))
+        y_min = min(min(us_image[:, 0, 1]), min(us_image[0, :, 1]), min(us_image[:, -1, 1]), min(us_image[-1, :, 1]))
+        x_max = max(max(us_image[:, 0, 0]), max(us_image[0, :, 0]), max(us_image[:, -1, 0]), max(us_image[-1, :, 0]))
+        y_max = max(max(us_image[:, 0, 1]), max(us_image[0, :, 1]), max(us_image[:, -1, 1]), max(us_image[-1, :, 1]))
 
         return [x_min, x_max, y_min, y_max]

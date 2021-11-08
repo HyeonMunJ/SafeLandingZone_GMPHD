@@ -35,7 +35,7 @@ class Main_GMPHD:
         rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, self.save_vel)
         rospy.Subscriber("/custom/flag_main", Bool, self.save_flag_main)
         rospy.Subscriber("/custom/flag_score", Bool, self.save_flag_score)
-        rospy.Sybscriber("custom/slz_point/edge", Float32MultiArray, self.save_edge)
+        rospy.Subscriber("custom/slz_point/edge", Float32MultiArray, self.save_edge)
 
         self.pub_gmphd = rospy.Publisher('/custom/gmphd/result', Float32MultiArray, queue_size=2)
         self.pub_gmphd_flag = rospy.Publisher('/custom/flag_phd', Bool, queue_size=2)

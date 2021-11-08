@@ -183,9 +183,9 @@ g.gmm
 		# randomly chosen variables
 
 		self.pos_prev = self.pos_now
-		self.pos_now = [pose[0], pose[1]]
+		self.pos_now = pose[0:2]
 
-		N_min, N_max, E_min, E_max = edge[0], edge[1], edge[2], edge[3] # max N and E position of meas. at the previous time
+		N_min, N_max, E_min, E_max = edge[0:4] # max N and E position of meas. at the previous time
 		N_diff, E_diff = self.pos_now[0] - self.pos_prev[0], self.pos_now[1] - self.pos_prev[1] # N and E movement of UAV
 		N_max_k, N_min_k,E_max_k, E_min_k = N_max + N_diff, N_min + N_diff, E_max + E_diff, E_min + E_diff
 
@@ -193,10 +193,9 @@ g.gmm
 		V_A = (E_length - E_diff) * (N_length - N_diff)
 		V_B = N_diff * E_length + E_diff * N_length - E_diff * N_diff
 
-		weight_A, weight_B = 1e-2, 1e-1
+		weight_A, weight_B = 1e-2, 1e-1 # should be modified
 
-		pkk_b = pkk
-
+		# pkk_b = ?
 
 		#######################################
 		# Step 2 - prediction for existing targets
@@ -232,6 +231,8 @@ g.gmm
 						for index, comp in enumerate(predicted)]
 		pkk = [dot(eye(len(k[index])) - dot(k[index], self.h), comp.cov)
 						for index, comp in enumerate(predicted)]
+
+		pkk_b = pkk # should be modified properly
 
 		#######################################
 		# Step 4-1 - update states of surviving targets using observations
@@ -279,7 +280,7 @@ g.gmm
 
 				newgmmpartial.append(GmphdComponent(          \
 						weight_A / V_A,    \
-						linalg.inv(self.h) * anobs),  \
+						linalg.inv(self.h) * anobs, # should be modified along the dimension of the state \ 
 						pkk_b[j]                                \
 						))
 	
@@ -307,7 +308,7 @@ g.gmm
 
 				newgmmpartial.append(GmphdComponent(          \
 						weight_B / V_B,    \
-						linalg.inv(self.h) * anobs,  \
+						linalg.inv(self.h) * anobs, # should be modified along the dimension of the state \ 
 						pkk_b[j]                                \
 						))
 	
