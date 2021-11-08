@@ -136,6 +136,8 @@ g.gmm
 		self.r = array(r, dtype=myfloat)   # observation noise covariance (R_k in paper)
 		self.clutter = myfloat(clutter)   # clutter intensity (KAU in paper)
 
+		self.edge = [0., 0., 0., 0.]
+
 		self.pos_now = [0., 0.]
 		self.pos_prev = [0., 0.]
 
@@ -148,14 +150,17 @@ g.gmm
 		obs_s = []
 		T_s = 1e-1 # threshold 
 
-		for gmm in gmm_set:
-			for obs in obs_set:
+		for obs in obs_set:
+			flag_inside = False
+			for gmm in gmm_set:
 				diff = linalg.norm(obs - dot(dot(H, F), gmm.loc))
 				if diff < T_s:
-					obs_b.append(obs)
-				else:
 					obs_s.append(obs)
-		
+					flag_inside = True
+					break
+			if not flag_inside:
+				obs_b.append(obs)
+
 		return obs_b, obs_s
 
 
@@ -182,17 +187,44 @@ g.gmm
 		#######################################
 		# randomly chosen variables
 
+		'''
 		self.pos_prev = self.pos_now
 		self.pos_now = pose[0:2]
 
-		N_min, N_max, E_min, E_max = edge[0:4] # max N and E position of meas. at the previous time
+		N_min, N_max, E_min, E_max = edge # max N and E position of meas. at the previous time
 		N_diff, E_diff = self.pos_now[0] - self.pos_prev[0], self.pos_now[1] - self.pos_prev[1] # N and E movement of UAV
 		N_max_k, N_min_k,E_max_k, E_min_k = N_max + N_diff, N_min + N_diff, E_max + E_diff, E_min + E_diff
 
-		N_length, E_length = abs(N_max_k - N_min_k), abs(E_max_k - E_min_k)
-		V_A = (E_length - E_diff) * (N_length - N_diff)
-		V_B = N_diff * E_length + E_diff * N_length - E_diff * N_diff
+		'''
+		# calculation of the volume of each regions
+		edge_prev = self.edge
+		self.edge = edge
 
+		if self.edge[1] > edge_prev[1]:
+			if self.edge[0] > edge_prev[0]:
+				w = edge_prev[1] - self.edge[0]
+			else:
+				w = edge_prev[1] - edge_prev[0]
+		else:
+			if self.edge[0] > edge_prev[0]:
+				w = self.edge[1] - self.edge[0]
+			else:
+				w = self.edge[0] - edge_prev[0]
+
+		if self.edge[3] > edge_prev[3]:
+			if self.edge[2] > edge_prev[2]:
+				h = edge_prev[3] - self.edge[2]
+			else:
+				h = edge_prev[3] - edge_prev[2]
+		else:
+			if self.edge[2] > edge_prev[2]:
+				h = self.edge[3] - self.edge[2]
+			else:
+				h = self.edge[2] - edge_prev[2]
+
+		V_B = w * h
+		V_A = (self.edge[1] - self.edge[0]) * (self.edge[3] - self.edge[2]) - V_B
+ 
 		weight_A, weight_B = 1e-2, 1e-1 # should be modified
 
 		# pkk_b = ?
@@ -216,7 +248,7 @@ g.gmm
 		obs_A = []
 		obs_B = []
 		for obs in obs_birth:
-			if N_min <= obs[0] <= N_max or E_min <= obs[1] <= E_max:
+			if edge[0] <= obs[0] <= edge[1] or edge[2] <= obs[1] <= edge[3]:
 				obs_A.append(obs)
 			else:
 				obs_B.append(obs)
@@ -255,7 +287,7 @@ g.gmm
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in newgmmpartial)
-			reweighter = 1.0 / (self.clutter + weightsum + V_A/weight_A + V_B/weight_B)
+			reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
 			for newcomp in newgmmpartial:
 				newcomp.weight *= reweighter
 
@@ -286,7 +318,7 @@ g.gmm
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
-			reweighter = 1.0 / (self.clutter + weightsum + V_A/weight_A + V_B/weight_B)
+			reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
 			for newcomp in newgmmpartial:
 				newcomp.weight *= reweighter
 
