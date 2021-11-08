@@ -31,6 +31,14 @@ class SLZ_detection:
             self.det_SLZ(self.image)
         self.i += 1
 
+    def find_region(self, us_image):
+        x_min = min(min(us_image[:, 0, 0]), min(us_image[0, :, 0]), min(us_image[:, -1, 0]), min(us_image[-1, :, 0]))
+        y_min = min(min(us_image[:, 0, 1]), min(us_image[0, :, 1]), min(us_image[:, -1, 1]), min(us_image[-1, :, 1]))
+        x_max = max(max(us_image[:, 0, 0]), max(us_image[0, :, 0]), max(us_image[:, -1, 0]), max(us_image[-1, :, 0]))
+        y_max = max(max(us_image[:, 0, 1]), max(us_image[0, :, 1]), max(us_image[:, -1, 1]), max(us_image[-1, :, 1]))
+
+        return [x_min, x_max, y_min, y_max]
+
     def crop_edge(self, image, x_crop, y_crop):
         x, y,_ = np.shape(image)
         crop_image = image[x_crop: x-x_crop, y_crop: y-y_crop]
@@ -247,10 +255,3 @@ class SLZ_detection:
         self.best_SLZ = state_vector
 
 
-    def find_region(self, us_image):
-        x_min = min(min(us_image[:, 0, 0]), min(us_image[0, :, 0]), min(us_image[:, -1, 0]), min(us_image[-1, :, 0]))
-        y_min = min(min(us_image[:, 0, 1]), min(us_image[0, :, 1]), min(us_image[:, -1, 1]), min(us_image[-1, :, 1]))
-        x_max = max(max(us_image[:, 0, 0]), max(us_image[0, :, 0]), max(us_image[:, -1, 0]), max(us_image[-1, :, 0]))
-        y_max = max(max(us_image[:, 0, 1]), max(us_image[0, :, 1]), max(us_image[:, -1, 1]), max(us_image[-1, :, 1]))
-
-        return [x_min, x_max, y_min, y_max]

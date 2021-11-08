@@ -122,7 +122,7 @@ class Pcd_2_array:
 
     def assign_state_edge(self, edge):
         msg = Float32MultiArray()
-        msg.data = edge
+        msg.data = np.array(edge)
 
         return msg
 
