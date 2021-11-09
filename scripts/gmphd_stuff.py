@@ -32,11 +32,11 @@ def calc_score(weight, loc):
         print('loc is empty')
     return score
 
-def updateandprune(g, obsset, dt, pose, edge):
+def updateandprune(g, obsset, dt, edge):
     f = create_F(dt)
     print("-------------------------------------------------------------------")
     # update GM-PHD
-    g.update(obsset, f, pose, edge) 
+    g.update(obsset, f, edge) 
     # merge similar components and prune the components with low weight
     g.prune(maxcomponents=50, mergethresh=0.5) 
     return g
@@ -66,7 +66,7 @@ def create_F(dt):
     # on constant velocity model x = vt + x_0
     F = np.array([[1, dt, 0, 0, 0, 0, 0, 0, 0],
                   [0, 1, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 1, dt, 0, 0, 0, 0, 0],
+                   [0, 0, 1, dt, 0, 0, 0, 0, 0],
                   [0, 0, 0, 1, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 1, dt, 0, 0, 0],
                   [0, 0, 0, 0, 0, 1, 0, 0, 0],
@@ -87,6 +87,17 @@ def create_H():
                     [0, 0, 0, 0, 0, 0, 0, 0, 1]],  dtype=float)
     return H
 
+def create_H_star():
+    H_star = np.array([[1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 1,  0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 1, 0],
+                    [0, 0, 0, 0, 0, 1]],  dtype=float)
+    return H_star
 
 def init_PHD(pos, vel):
     # parameter variables
@@ -125,9 +136,11 @@ def init_PHD(pos, vel):
     transnmatrix = create_F(dt)
     obsnmatrix = create_H()
 
-    # birthgmm = birth_gmm(pos, vel, 1.0)
+    birthgmm = birth_gmm(pos, vel, 1.0)
 
-    g = Gmphd(survivalprob, detectprob, transnmatrix, Q, obsnmatrix, R, clutterintensity)
+    h_star = create_H_star()
+
+    g = Gmphd(survivalprob, detectprob, transnmatrix, Q, obsnmatrix, R, clutterintensity, birthgmm, h_star)
 
     return g
 

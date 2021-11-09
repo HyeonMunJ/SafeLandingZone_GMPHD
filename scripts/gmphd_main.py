@@ -120,7 +120,7 @@ class Main_GMPHD:
             else:
                 self.flag_slz = False
             # predict -> update -> merge -> prune
-            self.g = updateandprune(self.g, self.slz_state, dt, self.pos, self.edge)
+            self.g = updateandprune(self.g, self.slz_state, dt, self.edge)
             # extract a state which has max. weight from weight distribution of gm-phd components
             est_state, weight = self.g.extractstatesmax()
             print('est_state: ', est_state)

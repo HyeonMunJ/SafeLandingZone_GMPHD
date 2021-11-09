@@ -113,7 +113,7 @@ g.gmm
 [(float(comp.loc), comp.weight) for comp in g.gmm]
 	"""
 	
-	def __init__(self, survival, detection, f, q, h, r, clutter):
+	def __init__(self, survival, detection, f, q, h, r, clutter, birthgmm, h_star):
 		"""
 		  'birthgmm' is an array of GmphdComponengo!
 
@@ -125,9 +125,9 @@ g.gmm
 		  'clutter' is the clutter intensity.
 		  """
 		# self.gmm = []  # empty - things will need to be born before we observe them
-		# self.birthgmm = birthgmm
-		# self.gmm = deepcopy(self.birthgmm)
-		self.gmm = []
+		self.birthgmm = birthgmm
+		self.gmm = deepcopy(self.birthgmm)
+		# self.gmm = []
 		self.survival = myfloat(survival)        # p_{s,k}(x) in paper
 		self.detection = myfloat(detection)      # p_{d,k}(x) in paper
 		self.f = array(f, dtype=myfloat)   # state transition matrix      (F_k-1 in paper)
@@ -135,6 +135,8 @@ g.gmm
 		self.h = array(h, dtype=myfloat)   # observation matrix           (H_k in paper)
 		self.r = array(r, dtype=myfloat)   # observation noise covariance (R_k in paper)
 		self.clutter = myfloat(clutter)   # clutter intensity (KAU in paper)
+
+		self.h_star = array(h_star, dtype=myfloat)
 
 		self.edge = [0., 0., 0., 0.]
 
@@ -150,21 +152,24 @@ g.gmm
 		obs_s = []
 		T_s = 1e-1 # threshold 
 
-		for obs in obs_set:
-			flag_inside = False
-			for gmm in gmm_set:
-				diff = linalg.norm(obs - dot(dot(H, F), gmm.loc))
-				if diff < T_s:
-					obs_s.append(obs)
-					flag_inside = True
-					break
-			if not flag_inside:
-				obs_b.append(obs)
+		try:
+			for obs in obs_set:
+				flag_inside = False
+				for gmm in gmm_set:
+					diff = linalg.norm(obs - dot(dot(H, F), gmm.loc))
+					if diff < T_s:
+						obs_s.append(obs)
+						flag_inside = True
+						break
+				if not flag_inside:
+					obs_b.append(obs)
+		except:
+			pass
 
 		return obs_b, obs_s
 
 
-	def update(self, obs, f, pose, edge):
+	def update(self, obs, f, edge):
 		"""Run a single GM-PHD step given a new frame of observations.
 		  'obs' is an array (a set) of this frame's observations.
 		  Based on Table 1 from Vo and Ma paper."""
@@ -183,6 +188,7 @@ g.gmm
 			) for comp in obs_birth]
 		# born = []
 		'''
+
 
 		#######################################
 		# randomly chosen variables
@@ -248,10 +254,13 @@ g.gmm
 		obs_A = []
 		obs_B = []
 		for obs in obs_birth:
-			if edge[0] <= obs[0] <= edge[1] or edge[2] <= obs[1] <= edge[3]:
+			if edge[0] <= obs[0] <= edge[1] and edge[2] <= obs[1] <= edge[3]:
 				obs_A.append(obs)
 			else:
 				obs_B.append(obs)
+
+		print('size of obs_surv : ', size(obs_surv), 'size of obs_birth : ', size(obs_birth))
+		print('size of obs_A : ', size(obs_A), 'size of obs_B : ', size(obs_B))
 
 		#######################################
 		# Step 3 - construction of PHD update components
@@ -287,7 +296,15 @@ g.gmm
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in newgmmpartial)
-			reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
+			if V_A and V_B:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
+			elif not V_A and V_B:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_B / V_B)
+			elif not V_B and V_A:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A )
+			else:
+				reweighter = 1.0 / (self.clutter + weightsum)
+
 			for newcomp in newgmmpartial:
 				newcomp.weight *= reweighter
 
@@ -312,13 +329,21 @@ g.gmm
 
 				newgmmpartial.append(GmphdComponent(          \
 						weight_A / V_A,    \
-						linalg.inv(self.h) * anobs, # should be modified along the dimension of the state \ 
+						self.h_star * anobs, # should be modified along the dimension of the state \ 
 						pkk_b[j]                                \
 						))
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
-			reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
+			if V_A and V_B:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
+			elif not V_A and V_B:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_B / V_B)
+			elif not V_B and V_A:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A )
+			else:
+				reweighter = 1.0 / (self.clutter + weightsum)
+			
 			for newcomp in newgmmpartial:
 				newcomp.weight *= reweighter
 
@@ -340,13 +365,21 @@ g.gmm
 
 				newgmmpartial.append(GmphdComponent(          \
 						weight_B / V_B,    \
-						linalg.inv(self.h) * anobs, # should be modified along the dimension of the state \ 
+						self.h_star * anobs, # should be modified along the dimension of the state \ 
 						pkk_b[j]                                \
 						))
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
-			reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
+			if V_A and V_B:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
+			elif not V_A and V_B:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_B / V_B)
+			elif not V_B and V_A:
+				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A )
+			else:
+				reweighter = 1.0 / (self.clutter + weightsum)
+			
 			for newcomp in newgmmpartial:
 				newcomp.weight *= reweighter
 
@@ -354,7 +387,7 @@ g.gmm
 
 		self.gmm = newgmm
 
-	def prune(self, truncthresh=1e-10, mergethresh=0.2, maxcomponents=100):
+	def prune(self, truncthresh=1e-20, mergethresh=0.2, maxcomponents=100):
 		"""Prune the GMM. Alters model state.
 		  Based on Table 2 from Vo and Ma paper."""
 		# Truncation is easy
