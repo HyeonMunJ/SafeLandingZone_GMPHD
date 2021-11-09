@@ -32,14 +32,13 @@ def calc_score(weight, loc):
         print('loc is empty')
     return score
 
-def updateandprune(g, obsset, dt, edge):
+def updateandprune(g, obsset, dt):
     f = create_F(dt)
     print("-------------------------------------------------------------------")
     # update GM-PHD
-    g.update(obsset, f, edge) 
+    g.update(obsset, f) 
     # merge similar components and prune the components with low weight
     g.prune(maxcomponents=50, mergethresh=0.5) 
-    return g
 
 def birth_gmm(pos, vel, weight):
 
@@ -55,8 +54,8 @@ def birth_gmm(pos, vel, weight):
 
     # create birth component
     # GmphdComponent(weight, state, covariance)
-    x_sample = np.random.uniform(-20, 20, 1)
-    y_sample = np.random.uniform(-20, 20, 1)
+    x_sample = np.random.uniform(-20, 20, 4)
+    y_sample = np.random.uniform(-20, 20, 4)
     birth_set = [GmphdComponent(weight, [x, - vel[0], y, -vel[1], - pos[2], - vel[2], \
         2., 0.2, 0.05], P_0) for x in x_sample for y in y_sample]
     return birth_set
@@ -115,8 +114,8 @@ def init_PHD(pos, vel):
     z_std_ri = 1.
 
     # filter variable
-    survivalprob = 1. # hypothetical probabilities
-    detectprob = 1.
+    survivalprob = 0.99 # hypothetical probabilities
+    detectprob = 0.99
     clutterintensity = 0.001
 
     dt = 2 # 1./freq_est

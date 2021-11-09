@@ -14,7 +14,7 @@ from gmphd_stuff import *
 
 class Main_GMPHD:
     def __init__(self):
-        self.slz_state = None # state vector in the image frame considering yaw of the camera
+        self.slz_state = [] # state vector in the image frame considering yaw of the camera
         self.state_ct = None # state vector in the world frame
         self.flag_main_init = False # flag for initializing PHD filter
         self.flag_PHD_init = False # flag indicating that PHD has initialized
@@ -44,7 +44,9 @@ class Main_GMPHD:
     ##################################### Callback for subscribe #########################################
     ######################################################################################################
     def save_edge(self, msg):
-        self.edge = msg.data # [x_min, x_max, y_min, y_max]
+        if self.flag_PHD_init:
+            self.g.edge_prev = self.g.edge
+            self.g.edge = msg.data # [x_min, x_max, y_min, y_max]
 
     def save_slz(self, msg):
         msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/6, 6))
@@ -120,7 +122,7 @@ class Main_GMPHD:
             else:
                 self.flag_slz = False
             # predict -> update -> merge -> prune
-            self.g = updateandprune(self.g, self.slz_state, dt, self.edge)
+            updateandprune(self.g, self.slz_state, dt)
             # extract a state which has max. weight from weight distribution of gm-phd components
             est_state, weight = self.g.extractstatesmax()
             print('est_state: ', est_state)

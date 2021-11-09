@@ -139,37 +139,66 @@ g.gmm
 		self.h_star = array(h_star, dtype=myfloat)
 
 		self.edge = [0., 0., 0., 0.]
+		self.edge_prev = [0., 0., 0., 0.]
 
 		self.pos_now = [0., 0.]
 		self.pos_prev = [0., 0.]
 
 		self.birth_weight = 1e-2
 
-	def meas_classification(self, gmm_set, obs_set, F, H):
+	def meas_classification(self, obs_set):
 		# considering the mahalanobis distance between measurements and predicted target states,
 		# classify measurements into meas from birth targets and meas from surviving targets
 		obs_b = []
 		obs_s = []
-		T_s = 1e-1 # threshold 
+		T_s = 90 # threshold 
 
-		try:
-			for obs in obs_set:
-				flag_inside = False
-				for gmm in gmm_set:
-					diff = linalg.norm(obs - dot(dot(H, F), gmm.loc))
-					if diff < T_s:
-						obs_s.append(obs)
-						flag_inside = True
-						break
-				if not flag_inside:
-					obs_b.append(obs)
-		except:
-			pass
+		for obs in obs_set:
+			flag_inside = False
+			for comp in self.gmm:
+				diff = linalg.norm(obs - dot(dot(self.h, self.f), comp.loc))
+				print('diff = ', diff)
+				if diff < T_s:
+					obs_s.append(obs)
+					flag_inside = True
+					break
+			if self.gmm == []:
+				obs_s.append(obs)
+			elif not flag_inside:
+				obs_b.append(obs)
 
 		return obs_b, obs_s
 
+	def meas_volume_calc(self):
 
-	def update(self, obs, f, edge):
+		if self.edge[1] > self.edge_prev[1]:
+			if self.edge[0] > self.edge_prev[0]:
+				w = self.edge_prev[1] - self.edge[0]
+			else:
+				w = self.edge_prev[1] - self.edge_prev[0]
+		else:
+			if self.edge[0] > self.edge_prev[0]:
+				w = self.edge[1] - self.edge[0]
+			else:
+				w = self.edge[0] - self.edge_prev[0]
+
+		if self.edge[3] > self.edge_prev[3]:
+			if self.edge[2] > self.edge_prev[2]:
+				h = self.edge_prev[3] - self.edge[2]
+			else:
+				h = self.edge_prev[3] - self.edge_prev[2]
+		else:
+			if self.edge[2] > self.edge_prev[2]:
+				h = self.edge[3] - self.edge[2]
+			else:
+				h = self.edge[2] - self.edge_prev[2]
+
+		V_B = w * h
+		V_A = (self.edge[1] - self.edge[0]) * (self.edge[3] - self.edge[2]) - V_B
+
+		return V_A, V_B
+
+	def update(self, obs, f):
 		"""Run a single GM-PHD step given a new frame of observations.
 		  'obs' is an array (a set) of this frame's observations.
 		  Based on Table 1 from Vo and Ma paper."""
@@ -191,47 +220,10 @@ g.gmm
 
 
 		#######################################
-		# randomly chosen variables
-
-		'''
-		self.pos_prev = self.pos_now
-		self.pos_now = pose[0:2]
-
-		N_min, N_max, E_min, E_max = edge # max N and E position of meas. at the previous time
-		N_diff, E_diff = self.pos_now[0] - self.pos_prev[0], self.pos_now[1] - self.pos_prev[1] # N and E movement of UAV
-		N_max_k, N_min_k,E_max_k, E_min_k = N_max + N_diff, N_min + N_diff, E_max + E_diff, E_min + E_diff
-
-		'''
 		# calculation of the volume of each regions
-		edge_prev = self.edge
-		self.edge = edge
-
-		if self.edge[1] > edge_prev[1]:
-			if self.edge[0] > edge_prev[0]:
-				w = edge_prev[1] - self.edge[0]
-			else:
-				w = edge_prev[1] - edge_prev[0]
-		else:
-			if self.edge[0] > edge_prev[0]:
-				w = self.edge[1] - self.edge[0]
-			else:
-				w = self.edge[0] - edge_prev[0]
-
-		if self.edge[3] > edge_prev[3]:
-			if self.edge[2] > edge_prev[2]:
-				h = edge_prev[3] - self.edge[2]
-			else:
-				h = edge_prev[3] - edge_prev[2]
-		else:
-			if self.edge[2] > edge_prev[2]:
-				h = self.edge[3] - self.edge[2]
-			else:
-				h = self.edge[2] - edge_prev[2]
-
-		V_B = w * h
-		V_A = (self.edge[1] - self.edge[0]) * (self.edge[3] - self.edge[2]) - V_B
- 
-		weight_A, weight_B = 1e-2, 1e-1 # should be modified
+		
+		V_A, V_B = self.meas_volume_calc()
+		weight_A, weight_B = 1e-1, 1. # should be modified
 
 		# pkk_b = ?
 
@@ -249,17 +241,17 @@ g.gmm
 
 		######################################
 		# measurement classification
-		obs_birth, obs_surv = self.meas_classification(self.gmm, obs, self.f, self.h)		
+		obs_birth, obs_surv = self.meas_classification(obs)		
 
 		obs_A = []
 		obs_B = []
 		for obs in obs_birth:
-			if edge[0] <= obs[0] <= edge[1] and edge[2] <= obs[1] <= edge[3]:
+			if self.edge[0] <= obs[0] <= self.edge[1] and self.edge[2] <= obs[1] <= self.edge[3]:
 				obs_A.append(obs)
 			else:
 				obs_B.append(obs)
 
-		print('size of obs_surv : ', size(obs_surv), 'size of obs_birth : ', size(obs_birth))
+		print("size of obs_surv : ", size(obs_surv), "size of obs_birth : ", size(obs_birth))
 		print('size of obs_A : ', size(obs_A), 'size of obs_B : ', size(obs_B))
 
 		#######################################
@@ -327,11 +319,12 @@ g.gmm
 						pkk[j]                                \
 						))
 
-				newgmmpartial.append(GmphdComponent(          \
-						weight_A / V_A,    \
-						self.h_star * anobs, # should be modified along the dimension of the state \ 
-						pkk_b[j]                                \
-						))
+				if not V_A == 0:
+					newgmmpartial.append(GmphdComponent(          \
+							weight_A / V_A,    \
+							dot(self.h_star, anobs), # should be modified along the dimension of the state \ 
+							pkk_b[j]                                \
+							))
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
@@ -363,11 +356,12 @@ g.gmm
 						pkk[j]                                \
 						))
 
-				newgmmpartial.append(GmphdComponent(          \
-						weight_B / V_B,    \
-						self.h_star * anobs, # should be modified along the dimension of the state \ 
-						pkk_b[j]                                \
-						))
+				if not V_B == 0:
+					newgmmpartial.append(GmphdComponent(          \
+							weight_B / V_B,    \
+							dot(self.h_star, anobs), # should be modified along the dimension of the state \ 
+							pkk_b[j]                                \
+							))
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
