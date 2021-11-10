@@ -157,7 +157,7 @@ g.gmm
 			flag_inside = False
 			for comp in self.gmm:
 				diff = linalg.norm(obs - dot(dot(self.h, self.f), comp.loc))
-				print('diff = ', diff)
+				# print('diff = ', diff)
 				if diff < T_s:
 					obs_s.append(obs)
 					flag_inside = True
@@ -167,7 +167,15 @@ g.gmm
 			elif not flag_inside:
 				obs_b.append(obs)
 
-		return obs_b, obs_s
+		obs_A = []
+		obs_B = []
+		for obs in obs_b:
+			if self.edge[0] <= obs[0] <= self.edge[1] and self.edge[2] <= obs[1] <= self.edge[3]:
+				obs_A.append(obs)
+			else:
+				obs_B.append(obs)
+
+		return obs_A, obs_B, obs_s
 
 	def meas_volume_calc(self):
 
@@ -203,6 +211,9 @@ g.gmm
 		  'obs' is an array (a set) of this frame's observations.
 		  Based on Table 1 from Vo and Ma paper."""
 		self.f = array(f, dtype=myfloat)
+
+		if array(obs).ndim == 1:
+			obs = [obs]
 		
 		'''
 		#######################################
@@ -241,18 +252,9 @@ g.gmm
 
 		######################################
 		# measurement classification
-		obs_birth, obs_surv = self.meas_classification(obs)		
+		obs_A, obs_B, obs_surv = self.meas_classification(obs)		
 
-		obs_A = []
-		obs_B = []
-		for obs in obs_birth:
-			if self.edge[0] <= obs[0] <= self.edge[1] and self.edge[2] <= obs[1] <= self.edge[3]:
-				obs_A.append(obs)
-			else:
-				obs_B.append(obs)
-
-		print("size of obs_surv : ", size(obs_surv), "size of obs_birth : ", size(obs_birth))
-		print('size of obs_A : ', size(obs_A), 'size of obs_B : ', size(obs_B))
+		print("size of obs_surv : ", size(obs_surv), 'size of obs_A : ', size(obs_A), 'size of obs_B : ', size(obs_B))
 
 		#######################################
 		# Step 3 - construction of PHD update components
@@ -272,13 +274,14 @@ g.gmm
 		# The 'predicted' components are kept, with a decay
 		newgmm = [GmphdComponent(comp.weight * (1.0 - self.detection), comp.loc, comp.cov) for comp in predicted]
 
-		# then more components are added caused by each obsn's interaction with exis`ting component
-		for anobs in obs_surv:
+		for anobs in obs:
+			if size(anobs) == 1:
+				break
+
 			anobs = array(anobs)
+			anobs = reshape(anobs, (size(anobs),1))
 			newgmmpartial = []
 			for j, comp in enumerate(predicted):
-				anobs = reshape(anobs, (size(anobs),1))
-
 				newgmmpartial.append(GmphdComponent(          \
 						self.detection * comp.weight          \
 							* dmvnorm(nu[j], s[j], anobs),    \
@@ -288,96 +291,37 @@ g.gmm
 	
 			# The Kappa thing (clutter and reweight)
 			weightsum = simplesum(newcomp.weight for newcomp in newgmmpartial)
-			if V_A and V_B:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
-			elif not V_A and V_B:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_B / V_B)
-			elif not V_B and V_A:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A )
-			else:
+
+			arr_surv = array(obs_surv)
+			arr_A = array(obs_A)
+			arr_B = array(obs_B)
+			if anobs in arr_surv:
 				reweighter = 1.0 / (self.clutter + weightsum)
+
+			elif anobs in arr_A:
+				for j, comp in enumerate(predicted):
+					newgmmpartial.append(GmphdComponent(          \
+							weight_A,    \
+							dot(self.h_star, anobs), # should be modified along the dimension of the state \ 
+							pkk_b[j]                                \
+							))
+				reweighter = 1.0 / (self.clutter + weightsum + weight_A)
+
+			elif anobs in arr_B:
+				for j, comp in enumerate(predicted):
+					# print('h_star : ', self.h_star)
+					# print('anobs : ', anobs)
+					newgmmpartial.append(GmphdComponent(          \
+							weight_B,    \
+							dot(self.h_star, anobs), # should be modified along the dimension of the state \ 
+							pkk_b[j]                                \
+							))
+				reweighter = 1.0 / (self.clutter + weightsum + weight_B)
 
 			for newcomp in newgmmpartial:
 				newcomp.weight *= reweighter
 
 			newgmm.extend(newgmmpartial)
-
-		########################################
-		# Step 4-2 - generate states of birth targets using observations
-
-		for anobs in obs_A:
-			anobs = array(anobs)
-			newgmmpartial = []
-			gaussianpartial = []
-			for j, comp in enumerate(predicted):
-				anobs = reshape(anobs, (size(anobs),1))
-
-				gaussianpartial.append(GmphdComponent(          \
-						self.detection * comp.weight          \
-							* dmvnorm(nu[j], s[j], anobs),    \
-						comp.loc + dot(k[j], anobs - nu[j]),  \
-						pkk[j]                                \
-						))
-
-				if not V_A == 0:
-					newgmmpartial.append(GmphdComponent(          \
-							weight_A / V_A,    \
-							dot(self.h_star, anobs), # should be modified along the dimension of the state \ 
-							pkk_b[j]                                \
-							))
-	
-			# The Kappa thing (clutter and reweight)
-			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
-			if V_A and V_B:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
-			elif not V_A and V_B:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_B / V_B)
-			elif not V_B and V_A:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A )
-			else:
-				reweighter = 1.0 / (self.clutter + weightsum)
-			
-			for newcomp in newgmmpartial:
-				newcomp.weight *= reweighter
-
-			newgmm.extend(newgmmpartial)
-
-		for anobs in obs_B:
-			anobs = array(anobs)
-			newgmmpartial = []
-			gaussianpartial = []
-			for j, comp in enumerate(predicted):
-				anobs = reshape(anobs, (size(anobs),1))
-
-				gaussianpartial.append(GmphdComponent(          \
-						self.detection * comp.weight          \
-							* dmvnorm(nu[j], s[j], anobs),    \
-						comp.loc + dot(k[j], anobs - nu[j]),  \
-						pkk[j]                                \
-						))
-
-				if not V_B == 0:
-					newgmmpartial.append(GmphdComponent(          \
-							weight_B / V_B,    \
-							dot(self.h_star, anobs), # should be modified along the dimension of the state \ 
-							pkk_b[j]                                \
-							))
-	
-			# The Kappa thing (clutter and reweight)
-			weightsum = simplesum(newcomp.weight for newcomp in gaussianpartial)
-			if V_A and V_B:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A + weight_B / V_B)
-			elif not V_A and V_B:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_B / V_B)
-			elif not V_B and V_A:
-				reweighter = 1.0 / (self.clutter + weightsum + weight_A / V_A )
-			else:
-				reweighter = 1.0 / (self.clutter + weightsum)
-			
-			for newcomp in newgmmpartial:
-				newcomp.weight *= reweighter
-
-			newgmm.extend(newgmmpartial)		
 
 		self.gmm = newgmm
 

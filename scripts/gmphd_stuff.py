@@ -114,8 +114,8 @@ def init_PHD(pos, vel):
     z_std_ri = 1.
 
     # filter variable
-    survivalprob = 0.99 # hypothetical probabilities
-    detectprob = 0.99
+    survivalprob = 1 # hypothetical probabilities
+    detectprob = 1
     clutterintensity = 0.001
 
     dt = 2 # 1./freq_est
