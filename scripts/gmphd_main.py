@@ -45,8 +45,9 @@ class Main_GMPHD:
     ######################################################################################################
     def save_edge(self, msg):
         if self.flag_PHD_init:
-            self.g.edge_prev = self.g.edge
+            # self.g.edge_prev = self.g.edge
             self.g.edge = msg.data # [x_min, x_max, y_min, y_max]
+            self.g.flag_meas_update = True
 
     def save_slz(self, msg):
         msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/6, 6))
@@ -122,31 +123,34 @@ class Main_GMPHD:
             else:
                 self.flag_slz = False
             # predict -> update -> merge -> prune
-            updateandprune(self.g, self.slz_state, dt)
-            # extract a state which has max. weight from weight distribution of gm-phd components
-            est_state, weight = self.g.extractstatesmax()
-            print('est_state: ', est_state)
+            if self.g.flag_meas_update:
+                self.g.flag_meas_update = False
+                updateandprune(self.g, self.slz_state, dt)
+                # extract a state which has max. weight from weight distribution of gm-phd components
+                
+                est_state, weight = self.g.extractstatesmax()
+                print('est_state: ', est_state)
 
-            # if the extracted state has the highest score, update it as the target point
-            if len(est_state):
-                score = calc_score(weight, est_state)
+                # if the extracted state has the highest score, update it as the target point
+                if len(est_state):
+                    score = calc_score(weight, est_state)
 
-                if score > max_score:
-                    max_score = score
+                    if score > max_score:
+                        max_score = score
 
-                    self.weight = weight
-                    self.state_ct = pcd_coord_transform(self.pos, est_state)
+                        self.weight = weight
+                        self.state_ct = pcd_coord_transform(self.pos, est_state)
 
-            # publish best SLZ to main module
-            msg_state = self.assign_gmphd_result(self.state_ct, self.weight)
-            self.pub_gmphd.publish(msg_state)
+                # publish best SLZ to main module
+                msg_state = self.assign_gmphd_result(self.state_ct, self.weight)
+                self.pub_gmphd.publish(msg_state)
 
-            if not self.flag_phd_done:
-                self.flag_phd_done = True
+                if not self.flag_phd_done:
+                    self.flag_phd_done = True
 
-            # publish flag indicating phd filter has updated to main module 
-            msg_flag = self.assign_flag_gmphd(self.flag_phd_done)
-            self.pub_gmphd_flag.publish(msg_flag)
+                # publish flag indicating phd filter has updated to main module 
+                msg_flag = self.assign_flag_gmphd(self.flag_phd_done)
+                self.pub_gmphd_flag.publish(msg_flag)
 
         return max_score
 

@@ -139,12 +139,17 @@ g.gmm
 		self.h_star = array(h_star, dtype=myfloat)
 
 		self.edge = [0., 0., 0., 0.]
-		self.edge_prev = [0., 0., 0., 0.]
 
-		self.pos_now = [0., 0.]
-		self.pos_prev = [0., 0.]
+		self.weight_A = 5e-1
+		self.weight_B = 1
 
-		self.birth_weight = 1e-2
+		self.flag_meas_update = False
+		# self.edge_prev = [0., 0., 0., 0.]
+
+		# self.pos_now = [0., 0.]
+		# self.pos_prev = [0., 0.]
+
+		# self.birth_weight = 1e-2
 
 	def meas_classification(self, obs_set):
 		# considering the mahalanobis distance between measurements and predicted target states,
@@ -177,35 +182,6 @@ g.gmm
 
 		return obs_A, obs_B, obs_s
 
-	def meas_volume_calc(self):
-
-		if self.edge[1] > self.edge_prev[1]:
-			if self.edge[0] > self.edge_prev[0]:
-				w = self.edge_prev[1] - self.edge[0]
-			else:
-				w = self.edge_prev[1] - self.edge_prev[0]
-		else:
-			if self.edge[0] > self.edge_prev[0]:
-				w = self.edge[1] - self.edge[0]
-			else:
-				w = self.edge[0] - self.edge_prev[0]
-
-		if self.edge[3] > self.edge_prev[3]:
-			if self.edge[2] > self.edge_prev[2]:
-				h = self.edge_prev[3] - self.edge[2]
-			else:
-				h = self.edge_prev[3] - self.edge_prev[2]
-		else:
-			if self.edge[2] > self.edge_prev[2]:
-				h = self.edge[3] - self.edge[2]
-			else:
-				h = self.edge[2] - self.edge_prev[2]
-
-		V_B = w * h
-		V_A = (self.edge[1] - self.edge[0]) * (self.edge[3] - self.edge[2]) - V_B
-
-		return V_A, V_B
-
 	def update(self, obs, f):
 		"""Run a single GM-PHD step given a new frame of observations.
 		  'obs' is an array (a set) of this frame's observations.
@@ -229,15 +205,6 @@ g.gmm
 		# born = []
 		'''
 
-
-		#######################################
-		# calculation of the volume of each regions
-		
-		V_A, V_B = self.meas_volume_calc()
-		weight_A, weight_B = 1e-1, 1. # should be modified
-
-		# pkk_b = ?
-
 		#######################################
 		# Step 2 - prediction for existing targets
 
@@ -254,7 +221,7 @@ g.gmm
 		# measurement classification
 		obs_A, obs_B, obs_surv = self.meas_classification(obs)		
 
-		print("size of obs_surv : ", size(obs_surv), 'size of obs_A : ', size(obs_A), 'size of obs_B : ', size(obs_B))
+		print("size of obs_surv : ", size(obs_surv)/6, 'size of obs_A : ', size(obs_A)/6, 'size of obs_B : ', size(obs_B)/6)
 
 		#######################################
 		# Step 3 - construction of PHD update components
@@ -275,17 +242,14 @@ g.gmm
 		newgmm = [GmphdComponent(comp.weight * (1.0 - self.detection), comp.loc, comp.cov) for comp in predicted]
 
 		for anobs in obs:
-			if size(anobs) == 1:
-				break
-
-			anobs = array(anobs)
-			anobs = reshape(anobs, (size(anobs),1))
+			anobs_arr = array(anobs)
+			anobs_arr = reshape(anobs, (size(anobs),1))
 			newgmmpartial = []
 			for j, comp in enumerate(predicted):
 				newgmmpartial.append(GmphdComponent(          \
 						self.detection * comp.weight          \
-							* dmvnorm(nu[j], s[j], anobs),    \
-						comp.loc + dot(k[j], anobs - nu[j]),  \
+							* dmvnorm(nu[j], s[j], anobs_arr),    \
+						comp.loc + dot(k[j], anobs_arr - nu[j]),  \
 						pkk[j]                                \
 						))
 	
@@ -299,24 +263,25 @@ g.gmm
 				reweighter = 1.0 / (self.clutter + weightsum)
 
 			elif anobs in arr_A:
-				for j, comp in enumerate(predicted):
-					newgmmpartial.append(GmphdComponent(          \
-							weight_A,    \
-							dot(self.h_star, anobs), # should be modified along the dimension of the state \ 
-							pkk_b[j]                                \
-							))
-				reweighter = 1.0 / (self.clutter + weightsum + weight_A)
+				newgmmpartial.append(GmphdComponent(          \
+						self.weight_A,    \
+						dot(self.h_star, anobs_arr), # should be modified along the dimension of the state \ 
+						pkk_b[j]                                \
+						))
+				reweighter = 1.0 / (self.clutter + weightsum + self.weight_A)
 
 			elif anobs in arr_B:
-				for j, comp in enumerate(predicted):
-					# print('h_star : ', self.h_star)
-					# print('anobs : ', anobs)
-					newgmmpartial.append(GmphdComponent(          \
-							weight_B,    \
-							dot(self.h_star, anobs), # should be modified along the dimension of the state \ 
-							pkk_b[j]                                \
-							))
-				reweighter = 1.0 / (self.clutter + weightsum + weight_B)
+				# print('h_star : ', self.h_star)
+				# print('anobs : ', anobs)
+				newgmmpartial.append(GmphdComponent(          \
+						self.weight_B,    \
+						dot(self.h_star, anobs_arr), # should be modified along the dimension of the state \ 
+						pkk_b[j]                                \
+						))
+				reweighter = 1.0 / (self.clutter + weightsum + self.weight_B)
+
+			else:
+				print('failed: ', anobs)
 
 			for newcomp in newgmmpartial:
 				newcomp.weight *= reweighter
@@ -325,7 +290,7 @@ g.gmm
 
 		self.gmm = newgmm
 
-	def prune(self, truncthresh=1e-20, mergethresh=0.2, maxcomponents=100):
+	def prune(self, truncthresh=1e-20, mergethresh=0.05, maxcomponents=100):
 		"""Prune the GMM. Alters model state.
 		  Based on Table 2 from Vo and Ma paper."""
 		# Truncation is easy
