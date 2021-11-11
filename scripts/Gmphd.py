@@ -1,35 +1,10 @@
 #!/usr/bin/env python
 
-# GM-PHD implementation in python by Dan Stowell.
-# Based on the description in Vo and Ma (2006).
-# (c) 2012 Dan Stowell and Queen Mary University of London.
-# All rights reserved.
-#
-# NOTE: I AM NOT IMPLEMENTING SPAWNING, since I don't need it.
-#   It would be straightforward to add it - see the original paper for how-to.
-"""
-This file is part of gmphd, GM-PHD filter in python by Dan Stowell.
-
-    gmphd is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    gmphd is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with gmphd.
-"""
-
 simplesum = sum   # we want to be able to use "pure" sum not numpy (shoulda namespaced)
 from numpy import *
 import numpy.linalg
 from copy import deepcopy
 from operator import attrgetter
-
 
 myfloat = numpy.float64
 
@@ -116,8 +91,6 @@ g.gmm
 	def __init__(self, survival, detection, f, q, h, r, clutter, birthgmm, h_star):
 		"""
 		  'birthgmm' is an array of GmphdComponengo!
-
-
 		  'f' is state transition matrix F.
 		  'q' is the process noise covariance Q.
 		  'h' is the observation matrix H.
@@ -144,13 +117,7 @@ g.gmm
 		self.weight_B = 1
 
 		self.flag_meas_update = False
-		# self.edge_prev = [0., 0., 0., 0.]
-
-		# self.pos_now = [0., 0.]
-		# self.pos_prev = [0., 0.]
-
-		# self.birth_weight = 1e-2
-
+		
 	def meas_classification(self, obs_set):
 		# considering the mahalanobis distance between measurements and predicted target states,
 		# classify measurements into meas from birth targets and meas from surviving targets
@@ -190,23 +157,9 @@ g.gmm
 
 		if array(obs).ndim == 1:
 			obs = [obs]
-		
-		'''
-		#######################################
-		# Step 1 - prediction for birth targets
-		# born = [deepcopy(comp) for comp in self.birthgmm]
-		# random_birth = obs[random.choice((len(obs)))]
-		# born = [deepcopy(comp) for comp in birthgmm] # assume the probability density of the birth intensity is uniformly distributed
-		born = [GmphdComponent(                        \
-					self.birth_weight,          \
-					comp,                \
-					self.q   \
-			) for comp in obs_birth]
-		# born = []
-		'''
 
 		#######################################
-		# Step 2 - prediction for existing targets
+		# Step 1 - prediction for existing targets
 
 		updated = [GmphdComponent(                        \
 					self.survival * comp.weight,          \
@@ -218,7 +171,7 @@ g.gmm
 		predicted = updated
 
 		######################################
-		# measurement classification
+		# Step 2 - measurement classification
 		obs_A, obs_B, obs_surv = self.meas_classification(obs)		
 
 		print("size of obs_surv : ", size(obs_surv)/6, 'size of obs_A : ', size(obs_A)/6, 'size of obs_B : ', size(obs_B)/6)
@@ -237,7 +190,7 @@ g.gmm
 		pkk_b = pkk # should be modified properly
 
 		#######################################
-		# Step 4-1 - update states of surviving targets using observations
+		# Step 4 - update states of surviving targets using observations
 		# The 'predicted' components are kept, with a decay
 		newgmm = [GmphdComponent(comp.weight * (1.0 - self.detection), comp.loc, comp.cov) for comp in predicted]
 

@@ -63,7 +63,7 @@ class SLZ_detection:
         x, y, z = np.shape(grid_image)
         image_array = np.reshape(grid_image, (x*y, 3))
 
-        sample_image = image_array[range(0, x*y, 7)]
+        sample_image = image_array[range(0, x*y, 7)] # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         try:
             # start = time.time()
             best_eq, best_inliers = plane.fit(sample_image, 0.1, maxIteration = 50)
