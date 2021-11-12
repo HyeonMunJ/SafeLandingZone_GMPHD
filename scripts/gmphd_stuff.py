@@ -142,13 +142,13 @@ def init_PHD(pos, vel):
     g = Gmphd(survivalprob, detectprob, transnmatrix, Q, obsnmatrix, R, clutterintensity, birthgmm, h_star)
 
     return g
-
+##
 
 def slz_plot(list_state):
     fig = plt.figure()
     axes = plt.axes(xlim=(-20, 20), ylim=(-20, 20))
     # print('shape of list_state : ', np.shape(list_state))
-    if len(list_state) == 1:
+    if np.array(list_state).ndim == 1:
         pass
     else:
         for state in list_state:
@@ -162,8 +162,6 @@ def slz_plot(list_state):
         # plt.plot(x, y, 'o')
         fig.show()
 
-
-##################################################################################################################################
-############################################### new for the adaptive BTI #########################################################
-##################################################################################################################################
-
+def save_fig(image):
+    np.save(image)
+    

@@ -28,29 +28,27 @@ class Pcd_2_array:
         self.slz_detection = SLZ_detection()
 
     def test(self, pcd):
-        if self.i % 10 == 0:
-            print('******************************')
-            converted_pcd = self.pointcloud2_to_array(pcd, squeeze=False)
+        print('******************************')
+        converted_pcd = self.pointcloud2_to_array(pcd, squeeze=False)
 
-            pcd_array = rf.structured_to_unstructured(converted_pcd)
+        pcd_array = rf.structured_to_unstructured(converted_pcd)
 
-            # dr = '/home/lics-hm/Documents/data/slz_pcd/pcd_array_%d' % self.i
-            # np.save(dr, pcd_array)
+        # dr = '/home/lics-hm/Documents/data/slz_pcd/pcd_array_%d' % self.i
+        # np.save(dr, pcd_array)
 
-            # pcd array has the information of RGBD
-            self.slz_detection.det_SLZ(pcd_array[:,:,:3])
-            state_slz = self.slz_detection.best_SLZ
+        # pcd array has the information of RGBD
+        self.slz_detection.det_SLZ(pcd_array[:,:,:3])
+        state_slz = self.slz_detection.best_SLZ
 
-            # dr_2 = '/home/lics-hm/Documents/data/slz_pcd/state_slz_%d' % self.i
-            # np.save(dr_2, state_slz)
+        # dr_2 = '/home/lics-hm/Documents/data/slz_pcd/state_slz_%d' % self.i
+        # np.save(dr_2, state_slz)
 
-            print('num of slz : ', len(state_slz))
-            if len(state_slz):
-                msg_slz = self.assign_state_slz(state_slz)
-                msg_edge = self.assign_state_edge(self.slz_detection.image_region)
-                self.pub_slz.publish(msg_slz)
-                self.pub_edge.publish(msg_edge)
-        self.i += 1
+        print('num of slz : ', len(state_slz))
+        if len(state_slz):
+            msg_slz = self.assign_state_slz(state_slz)
+            msg_edge = self.assign_state_edge(self.slz_detection.image_region)
+            self.pub_slz.publish(msg_slz)
+            self.pub_edge.publish(msg_edge)
 
     # converts_to_numpy(PointField, plural=True)
     def fields_to_dtype(self, fields, point_step):

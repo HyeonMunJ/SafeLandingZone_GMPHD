@@ -152,6 +152,8 @@ class Main_GMPHD:
                 msg_flag = self.assign_flag_gmphd(self.flag_phd_done)
                 self.pub_gmphd_flag.publish(msg_flag)
 
+                # print('maximum score is ', max_score)
+
         return max_score
 
 
