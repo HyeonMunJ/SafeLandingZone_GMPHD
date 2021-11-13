@@ -51,7 +51,7 @@ class Pcd_2_array:
             msg_idx = self.assign_state_idx(self.slz_detection.best_idx)
             self.pub_slz.publish(msg_slz)
             self.pub_edge.publish(msg_edge)
-            self.pub_idx.publist(msg_idx)
+            self.pub_idx.publish(msg_idx)
 
     # converts_to_numpy(PointField, plural=True)
     def fields_to_dtype(self, fields, point_step):
@@ -128,7 +128,8 @@ class Pcd_2_array:
 
     def assign_state_idx(self, idxs):
         msg = Float32MultiArray()
-        msg.data = np.array(idxs)
+        shape_idxs = np.shape(idxs)
+        msg.data = np.reshape(idxs, (shape_idxs[0]*shape_idxs[1]))
         return msg
 
 # __docformat__ = "restructurednpyext en"

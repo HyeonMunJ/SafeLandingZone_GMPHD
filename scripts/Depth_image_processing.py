@@ -77,7 +77,7 @@ class SLZ_detection:
     def calc_slopeness(self, plane_eq):
         n_z = plane_eq[2] / np.sqrt(plane_eq[0]**2 + plane_eq[1]**2 + plane_eq[2]**2)
         alpha = np.arccos(abs(n_z))
-        alpha_th = math.radians(15)
+        alpha_th = math.radians(10)
         if abs(alpha) < alpha_th:
             bool_slopeness = 1
         else:
@@ -150,16 +150,16 @@ class SLZ_detection:
             idx_d = np.argmax(image[i - s, j - s : j + s, 1])
             idx_l = np.argmax(image[i - s : i + s , j - s, 0]) # recently changed, check when the error occured
             idx_r = np.argmin(image[i - s : i + s , j + s, 0])
-            u, d, l, r = image[i+s, idx_u, 1], image[i-s, idx_d, 1], image[idx_l, j-s, 0], image[idx_r, j+s, 0]
+            u, d, l, r = image[i+s, j-s + idx_u, 1], image[i-s, j-s + idx_d, 1], image[i-s + idx_l, j-s, 0], image[i-s + idx_r, j+s, 0]
             ver_d = u - d
             hor_d = r - l
             idx_rad = np.argmin([ver_d, hor_d])
             if idx_rad == 0:
-                rad_pix = abs(idx_u - idx_d)/2
-                rad = (u - d)/2
+                rad_pix = abs(idx_u - idx_d)/2.
+                rad = ver_d/2.
             elif idx_rad == 1:
-                rad_pix = abs(idx_r - idx_l)/2
-                rad = (r - l)/2
+                rad_pix = abs(idx_r - idx_l)/2.
+                rad = hor_d/2.
 
             if rad < 0:
                 rad = 0
@@ -273,5 +273,6 @@ class SLZ_detection:
 
         self.best_SLZ = state_vector
         self.best_idx = idx_vector
+
 
 

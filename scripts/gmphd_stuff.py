@@ -165,7 +165,7 @@ def slz_plot(list_state):
         # plt.plot(x, y, 'o')
         fig.show()
 '''
-# please be changed
+
 def slz_drawing(list_idx, image_msg):
     cv_bridge = CvBridge()
     try:
@@ -175,8 +175,10 @@ def slz_drawing(list_idx, image_msg):
 
     if np.array(list_idx).ndim == 1:
         list_idx = [list_idx]
-    for element_idx in list_idx:
-        cv2.circle(cv_image, (element_idx[0], element_idx[1]), element_idx[2], (0, 255, 0), 2)
-    cv2.imshow('circled SLZ', cv_image)
-
+    for i, element_idx in enumerate(list_idx):
+        if element_idx[2] > 0:
+            cv2.circle(cv_image, (int(element_idx[1]), int(element_idx[0])), int(element_idx[2]), (0, 255, 0), 2)
+    # cv2.imshow('circled SLZ', cv_image)
+    dr = '/home/lics-hm/Documents/data/experiment_figure/circled_image/1112/sample_image_%d.jpg' %i
+    cv2.imwrite(dr, cv_image)
     # cv2.waitKey(3)

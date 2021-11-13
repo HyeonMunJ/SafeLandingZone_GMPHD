@@ -51,7 +51,8 @@ class Main_GMPHD:
     ##################################### Callback for subscribe #########################################
     ######################################################################################################
     def save_idx(self, msg):
-        slz_drawing(msg.data, self.image_data)
+        msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/3, 3))
+        slz_drawing(msg_data, self.image_data)
 
     def save_image(self, image_data):
         self.image_data = image_data
