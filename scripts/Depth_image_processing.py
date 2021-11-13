@@ -153,7 +153,7 @@ class SLZ_detection:
             u, d, l, r = image[i+s, j-s + idx_u, 1], image[i-s, j-s + idx_d, 1], image[i-s + idx_l, j-s, 0], image[i-s + idx_r, j+s, 0]
             ver_d = u - d
             hor_d = r - l
-            idx_rad = np.argmin([ver_d, hor_d])
+            idx_rad = np.argmin([abs(ver_d), abs(hor_d)])
             if idx_rad == 0:
                 rad_pix = abs(idx_u - idx_d)/2.
                 rad = ver_d/2.
@@ -175,7 +175,7 @@ class SLZ_detection:
         return state, idx_state # n x 5 (x_t, y_t, z_t, r, alpha, ri)
 
     def calc_state_vector(self, center_index_1, center_index_2, idx_1, idx_2):
-        rad_min = 2.
+        rad_min = 1.5
 
         for point_2 in center_index_2:
             n = len(center_index_1)
@@ -192,7 +192,8 @@ class SLZ_detection:
         for i in range(n_1):
             if center_index_1[i][3] < rad_min:
                 list_death.append(i)
-                pass
+            elif idx_1[i][2] < 30:
+                list_death.append(i)
             else:
                 for j in range(n_1 - i - 1):
                     idx = i + j + 1
@@ -211,7 +212,8 @@ class SLZ_detection:
         for i in range(n_2):
             if center_index_2[i][3] < rad_min:
                 list_death.append(i)
-                pass
+            elif idx_2[i][2] < 30:
+                list_death.append(i)
             else:
                 for j in range(n_2 - i - 1):
                     idx = i + j + 1

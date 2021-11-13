@@ -32,6 +32,7 @@ class Main_GMPHD:
         self.edge = [0., 0., 0., 0.] # [x_min, x_max, y_min, y_max]
 
         self.slz_record = []
+        self.i = 0
 
         self.image_data = None
         rospy.Subscriber("/camera/color/image_raw", Image, self.save_image)
@@ -42,7 +43,7 @@ class Main_GMPHD:
         rospy.Subscriber("/custom/flag_main", Bool, self.save_flag_main)
         rospy.Subscriber("/custom/flag_score", Bool, self.save_flag_score)
         rospy.Subscriber("/custom/slz_point/edge", Float32MultiArray, self.save_edge)
-        rospy.Subscriber("/custom/slz_point/idxs", Float32MultiArray, self.save_idx)
+        # rospy.Subscriber("/custom/slz_point/idxs", Float32MultiArray, self.save_idx)
 
         self.pub_gmphd = rospy.Publisher('/custom/gmphd/result', Float32MultiArray, queue_size=2)
         self.pub_gmphd_flag = rospy.Publisher('/custom/flag_phd', Bool, queue_size=2)
@@ -52,7 +53,8 @@ class Main_GMPHD:
     ######################################################################################################
     def save_idx(self, msg):
         msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/3, 3))
-        slz_drawing(msg_data, self.image_data)
+        slz_drawing(msg_data, self.image_data, self.i)
+        self.i += 1
 
     def save_image(self, image_data):
         self.image_data = image_data
