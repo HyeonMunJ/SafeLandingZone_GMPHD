@@ -44,7 +44,6 @@ class Main_GMPHD:
         rospy.Subscriber("/custom/slz_point/edge", Float32MultiArray, self.save_edge)
         rospy.Subscriber("/custom/slz_point/idxs", Float32MultiArray, self.save_idx)
 
-
         self.pub_gmphd = rospy.Publisher('/custom/gmphd/result', Float32MultiArray, queue_size=2)
         self.pub_gmphd_flag = rospy.Publisher('/custom/flag_phd', Bool, queue_size=2)
 
