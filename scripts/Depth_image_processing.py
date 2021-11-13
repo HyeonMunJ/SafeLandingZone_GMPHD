@@ -175,6 +175,8 @@ class SLZ_detection:
         return state, idx_state # n x 5 (x_t, y_t, z_t, r, alpha, ri)
 
     def calc_state_vector(self, center_index_1, center_index_2, idx_1, idx_2):
+        rad_min = 2.
+
         for point_2 in center_index_2:
             n = len(center_index_1)
             for idx in range(len(center_index_1)):
@@ -184,6 +186,45 @@ class SLZ_detection:
                 if dist < point_2[3]:
                     center_index_1 = np.delete(center_index_1, n - idx -1, axis = 0)
                     idx_1 = np.delete(idx_1, n - idx- 1, axis = 0)
+
+        n_1 = len(center_index_1)
+        list_death = []
+        for i in range(n_1):
+            if center_index_1[i][3] < rad_min:
+                list_death.append(i)
+                pass
+            else:
+                for j in range(n_1 - i - 1):
+                    idx = i + j + 1
+                    if idx in list_death:
+                        pass
+                    else:
+                        diff = center_index_1[i][0:2] - center_index_1[idx][0:2]
+                        dist = np.linalg.norm(diff)
+                        if dist < center_index_1[i][3]:
+                            list_death.append(idx)
+        center_index_1 = np.delete(center_index_1, list_death, axis = 0)
+        idx_1 = np.delete(idx_1, list_death, axis=0)
+                    
+        n_2 = len(center_index_2)
+        list_death = []
+        for i in range(n_2):
+            if center_index_2[i][3] < rad_min:
+                list_death.append(i)
+                pass
+            else:
+                for j in range(n_2 - i - 1):
+                    idx = i + j + 1
+                    if idx in list_death:
+                        pass
+                    else:
+                        diff = center_index_2[i][0:2] - center_index_2[idx][0:2]
+                        dist = np.linalg.norm(diff)
+                        if dist < center_index_2[i][3]:
+                            list_death.append(idx)
+        center_index_2 = np.delete(center_index_2, list_death, axis = 0)
+        idx_2 = np.delete(idx_2, list_death, axis = 0)
+        
         center_index_1 = center_index_1.tolist()
         center_index_2 = center_index_2.tolist()
         idx_1 = idx_1.tolist()
