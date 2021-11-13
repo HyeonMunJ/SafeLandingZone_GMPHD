@@ -19,6 +19,7 @@ class Pcd_2_array:
         rospy.Subscriber("/camera/depth/points", PointCloud2, self.test)
         self.pub_slz = rospy.Publisher('/custom/slz_point/states', Float32MultiArray, queue_size=2)
         self.pub_edge = rospy.Publisher('/custom/slz_point/edge', Float32MultiArray, queue_size=2)
+        self.pub_idx = rospy.Publisher('/custom/slz_point/idxs', Float32MultiArray, queue_size=2)
 
         self.i = 0
         self.DUMMY_FIELD_PREFIX = DUMMY_FIELD_PREFIX
@@ -47,8 +48,10 @@ class Pcd_2_array:
         if len(state_slz):
             msg_slz = self.assign_state_slz(state_slz)
             msg_edge = self.assign_state_edge(self.slz_detection.image_region)
+            msg_idx = self.assign_state_idx(self.slz_detection.best_idx)
             self.pub_slz.publish(msg_slz)
             self.pub_edge.publish(msg_edge)
+            self.pub_idx.publist(msg_idx)
 
     # converts_to_numpy(PointField, plural=True)
     def fields_to_dtype(self, fields, point_step):
@@ -121,7 +124,11 @@ class Pcd_2_array:
     def assign_state_edge(self, edge):
         msg = Float32MultiArray()
         msg.data = np.array(edge)
+        return msg
 
+    def assign_state_idx(self, idxs):
+        msg = Float32MultiArray()
+        msg.data = np.array(idxs)
         return msg
 
 # __docformat__ = "restructurednpyext en"

@@ -6,6 +6,8 @@ from Gmphd import Gmphd, GmphdComponent
 from filterpy.common.discretization import  Q_discrete_white_noise
 from scipy.linalg import block_diag
 import matplotlib.pyplot as plt
+import cv2
+from cv_bridge import CvBridge, CvBridgeError
 
 
 def pcd_coord_transform(pos, state_vector):
@@ -144,6 +146,7 @@ def init_PHD(pos, vel):
     return g
 ##
 
+'''
 def slz_plot(list_state):
     fig = plt.figure()
     axes = plt.axes(xlim=(-20, 20), ylim=(-20, 20))
@@ -161,7 +164,19 @@ def slz_plot(list_state):
     
         # plt.plot(x, y, 'o')
         fig.show()
+'''
 
-def save_fig(image):
-    np.save(image)
-    
+def slz_drawing(list_idx, image_msg):
+    cv_bridge = CvBridge()
+    try:
+        cv_image = cv_bridge.imgmsg_to_cv2(image_msg, "bgr8")
+    except CvBridgeError as e:
+        print(e)
+
+    if np.array(list_idx).ndim == 1:
+        list_idx = [list_idx]
+    for element_idx in list_idx:
+        cv2.circle(cv_image, (element_idx[0], element_idx[1]), element_idx[2], (0, 255, 0), 2)
+    cv2.imshow('circled SLZ', cv_image)
+
+    # cv2.waitKey(3)

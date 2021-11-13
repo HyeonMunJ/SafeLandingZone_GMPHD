@@ -21,7 +21,8 @@ class SLZ_detection:
         # rospy.Subscriber("/camera/depth/points", Image, self.save_depth_image)
         # self.pub_point = rospy.Publisher('slz_point', PoseStamped, queue_size=2)
         self.i = 0
-        self.best_SLZ = None
+        self.best_SLZ = []
+        self.best_idx = []
 
         self.edge_region = [0., 0., 0., 0.]
 
@@ -140,28 +141,40 @@ class SLZ_detection:
         idxs_2 = (idxs + 1/2 + level + crop_num) * dim_grid
         
         radius = []
+        idx_radius = []
         for i, j in idxs_2:
             s = int(40*level)
             i, j = int(i), int(j)
-            u = min(image[i + s, j - s : j + s, 1])
-            d = max(image[i - s, j - s : j + s, 1])
-            l = max(image[i - s : i + s , j - s, 0]) # recently changed, check when the error occured
-            r = min(image[i - s : i + s , j + s, 0])
+
+            idx_u = np.argmin(image[i + s, j - s : j + s, 1])
+            idx_d = np.argmax(image[i - s, j - s : j + s, 1])
+            idx_l = np.argmax(image[i - s : i + s , j - s, 0]) # recently changed, check when the error occured
+            idx_r = np.argmin(image[i - s : i + s , j + s, 0])
+            u, d, l, r = image[i+s, idx_u, 1], image[i-s, idx_d, 1], image[idx_l, j-s, 0], image[idx_r, j+s, 0]
             ver_d = u - d
             hor_d = r - l
-            rad = min(ver_d, hor_d)/2
+            idx_rad = np.argmin([ver_d, hor_d])
+            if idx_rad == 0:
+                rad_pix = abs(idx_u - idx_d)/2
+                rad = (u - d)/2
+            elif idx_rad == 1:
+                rad_pix = abs(idx_r - idx_l)/2
+                rad = (r - l)/2
+
             if rad < 0:
                 rad = 0
                 print('radius is minus')
             radius.append(rad)
+            idx_radius.append(rad_pix)
 
         pre_state = np.array([image[int(i), int(j)] for i, j in idxs_2])  
 
         state = np.c_[pre_state, radius, param]
-        
-        return state # n x 5 (x_t, y_t, z_t, r, alpha, ri)
+        idx_state = np.c_[idxs_2, idx_radius]
 
-    def calc_state_vector(self, center_index_1, center_index_2):
+        return state, idx_state # n x 5 (x_t, y_t, z_t, r, alpha, ri)
+
+    def calc_state_vector(self, center_index_1, center_index_2, idx_1, idx_2):
         for point_2 in center_index_2:
             n = len(center_index_1)
             for idx in range(len(center_index_1)):
@@ -170,14 +183,19 @@ class SLZ_detection:
                 dist = np.linalg.norm(diff)
                 if dist < point_2[3]:
                     center_index_1 = np.delete(center_index_1, n - idx -1, axis = 0)
+                    idx_1 = np.delete(idx_1, n - idx- 1, axis = 0)
         center_index_1 = center_index_1.tolist()
         center_index_2 = center_index_2.tolist()
+        idx_1 = idx_1.tolist()
+        idx_2 = idx_2.tolist()
 
         if len(center_index_1):
             state_vector = np.vstack([center_index_1, center_index_2])
+            idx_vector = np.vstack([idx_1, idx_2])
         else:
             state_vector = deepcopy(center_index_2)
-        return state_vector
+            idx_vector = deepcopy(idx_2)
+        return state_vector, idx_vector
 
 
     def det_sub_SLZ(self, grid_image, dim_grid, plane_time):    
@@ -229,21 +247,22 @@ class SLZ_detection:
         param_state = np.array(param_state).reshape(gx, gy, 2)
         
         conv_image_1 = self.convolution(list_SLZ)
-        center_1 = self.estimate_SLZ(conv_image_1, 1, image, crop_num, dim_grid, param_state)
+        center_1, idx_1 = self.estimate_SLZ(conv_image_1, 1, image, crop_num, dim_grid, param_state)
         
         conv_image_2 = self.convolution(conv_image_1)
-        center_2 = self.estimate_SLZ(conv_image_2, 2, image, crop_num, dim_grid, param_state)
+        center_2, idx_2 = self.estimate_SLZ(conv_image_2, 2, image, crop_num, dim_grid, param_state)
         
         state_vector = deepcopy(center_1)
         iter = 3
         for _ in range(2):
         # while True:
             if len(center_2):
-                state_vector = self.calc_state_vector(center_1, center_2)
+                state_vector, idx_vector = self.calc_state_vector(center_1, center_2, idx_1, idx_2)
                 
                 conv_image_3 = self.convolution(conv_image_2)
                 center_1 = deepcopy(center_2)
-                center_2 = self.estimate_SLZ(conv_image_3, iter, image, crop_num, dim_grid, param_state)
+                idx_1 = deepcopy(idx_2)
+                center_2, idx_2 = self.estimate_SLZ(conv_image_3, iter, image, crop_num, dim_grid, param_state)
                 conv_image_1 = deepcopy(conv_image_2)
                 conv_image_2 = deepcopy(conv_image_3)
                 iter += 1
@@ -253,5 +272,6 @@ class SLZ_detection:
         print('plane_time : ', plane_time)
 
         self.best_SLZ = state_vector
+        self.best_idx = idx_vector
 
 

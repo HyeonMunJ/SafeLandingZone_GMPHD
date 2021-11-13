@@ -4,6 +4,7 @@ import numpy as np
 import time
 from tf.transformations import euler_from_quaternion
 
+from sensor_msgs.msg import Image
 from std_msgs.msg import Float32MultiArray, Bool
 from geometry_msgs.msg import PoseStamped, TwistStamped
 # from main import q, s, m, p, f
@@ -30,12 +31,19 @@ class Main_GMPHD:
         self.att = [0., 0., 0.] # attitude of ownship (rpy)
         self.edge = [0., 0., 0., 0.] # [x_min, x_max, y_min, y_max]
 
+        self.slz_record = []
+
+        self.image_data = None
+        rospy.Subscriber("/camera/color/image_raw", Image, self.save_image)
+
         rospy.Subscriber("custom/slz_point/states", Float32MultiArray, self.save_slz)
         rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.save_pose)
         rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, self.save_vel)
         rospy.Subscriber("/custom/flag_main", Bool, self.save_flag_main)
         rospy.Subscriber("/custom/flag_score", Bool, self.save_flag_score)
         rospy.Subscriber("/custom/slz_point/edge", Float32MultiArray, self.save_edge)
+        rospy.Subscriber("/custom/slz_point/idxs", Float32MultiArray, self.save_idx)
+
 
         self.pub_gmphd = rospy.Publisher('/custom/gmphd/result', Float32MultiArray, queue_size=2)
         self.pub_gmphd_flag = rospy.Publisher('/custom/flag_phd', Bool, queue_size=2)
@@ -43,6 +51,12 @@ class Main_GMPHD:
     ######################################################################################################
     ##################################### Callback for subscribe #########################################
     ######################################################################################################
+    def save_idx(self, msg):
+        slz_drawing(msg.data, self.image_data)
+
+    def save_image(self, image_data):
+        self.image_data = image_data
+    
     def save_edge(self, msg):
         if self.flag_PHD_init:
             # self.g.edge_prev = self.g.edge
@@ -55,7 +69,6 @@ class Main_GMPHD:
         self.slz_state = [[-data[1], data[0], - data[2], data[3], data[4], data[5]] for data in msg_data]
         # self.flag_slz_updated = True
         self.flag_slz = True
-        # slz_plot(self.slz_state)
 
     def save_pose(self, msg):
         x = msg.pose.position.x
@@ -140,6 +153,9 @@ class Main_GMPHD:
 
                         self.weight = weight
                         self.state_ct = pcd_coord_transform(self.pos, est_state)
+
+                        self.slz_record.append([self.state_ct[0], self.state_ct[2], self.state_ct[4]])
+
 
                 # publish best SLZ to main module
                 msg_state = self.assign_gmphd_result(self.state_ct, self.weight)

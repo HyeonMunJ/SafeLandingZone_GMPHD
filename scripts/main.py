@@ -66,6 +66,7 @@ count = 1
 rate.sleep() # T_0 is sometimes measured as 0 so sleep first
 
 T_0 = rospy.get_rostime().to_time()
+slz_record = []
 while not rospy.is_shutdown():
     T_now = rospy.get_rostime().to_time()
 
