@@ -165,7 +165,7 @@ def slz_plot(list_state):
         # plt.plot(x, y, 'o')
         fig.show()
 '''
-
+# please be changed
 def slz_drawing(list_idx, image_msg):
     cv_bridge = CvBridge()
     try:
