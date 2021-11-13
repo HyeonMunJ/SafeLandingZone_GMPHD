@@ -25,10 +25,10 @@ def ctrl(c, q, phase, pos_default):
         #     v_z_cmd = e_z
 
     elif phase == 1:  # searching
-        # e_x_1 = q['x_t'] - q['x_o']
-        # e_y_1 = q['y_t'] - q['y_o']
-        e_x_1 = pos_default[0] - q['x_o']
-        e_y_1 = pos_default[1] - q['y_o']
+        e_x_1 = q['x_t'] - q['x_o']
+        e_y_1 = q['y_t'] - q['y_o']
+        # e_x_1 = pos_default[0] - q['x_o']
+        # e_y_1 = pos_default[1] - q['y_o']
         e_z_1 = pos_default[2] - q['z_o']
         e_hor_1 = np.linalg.norm([e_x_1, e_y_1])
 

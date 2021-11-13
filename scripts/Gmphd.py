@@ -123,12 +123,13 @@ g.gmm
 		# classify measurements into meas from birth targets and meas from surviving targets
 		obs_b = []
 		obs_s = []
-		T_s = 90 # threshold 
+		T_s = 5 # threshold 
 
 		for obs in obs_set:
 			flag_inside = False
 			for comp in self.gmm:
-				diff = linalg.norm(obs - dot(dot(self.h, self.f), comp.loc))
+				hf_loc = dot(dot(self.h, self.f), comp.loc)
+				diff = linalg.norm([obs[0] - hf_loc[0], obs[1] - hf_loc[1], obs[2] - hf_loc[2]])
 				# print('diff = ', diff)
 				if diff < T_s:
 					obs_s.append(obs)
@@ -149,7 +150,7 @@ g.gmm
 
 		return obs_A, obs_B, obs_s
 
-	def update(self, obs, f):
+	def update(self, obs, f, vel):
 		"""Run a single GM-PHD step given a new frame of observations.
 		  'obs' is an array (a set) of this frame's observations.
 		  Based on Table 1 from Vo and Ma paper."""
@@ -216,19 +217,21 @@ g.gmm
 				reweighter = 1.0 / (self.clutter + weightsum)
 
 			elif anobs in arr_A:
+				ele_vel = [0, -vel[0], 0, -vel[1], 0, -vel[2], 0, 0, 0]
+				ele_vel = reshape(array(ele_vel), (9,1))
 				newgmmpartial.append(GmphdComponent(          \
 						self.weight_A,    \
-						dot(self.h_star, anobs_arr), # should be modified along the dimension of the state \ 
+						dot(self.h_star, anobs_arr) + ele_vel, # should be modified along the dimension of the state \ 
 						pkk_b[j]                                \
 						))
 				reweighter = 1.0 / (self.clutter + weightsum + self.weight_A)
 
 			elif anobs in arr_B:
-				# print('h_star : ', self.h_star)
-				# print('anobs : ', anobs)
+				ele_vel = [0, -vel[0], 0, -vel[1], 0, -vel[2], 0, 0, 0]
+				ele_vel = reshape(array(ele_vel), (9,1))
 				newgmmpartial.append(GmphdComponent(          \
 						self.weight_B,    \
-						dot(self.h_star, anobs_arr), # should be modified along the dimension of the state \ 
+						dot(self.h_star, anobs_arr) + ele_vel, # should be modified along the dimension of the state \ 
 						pkk_b[j]                                \
 						))
 				reweighter = 1.0 / (self.clutter + weightsum + self.weight_B)
@@ -243,7 +246,7 @@ g.gmm
 
 		self.gmm = newgmm
 
-	def prune(self, truncthresh=1e-20, mergethresh=0.05, maxcomponents=100):
+	def prune(self, truncthresh=1e-20, mergethresh=0.1, maxcomponents=100):
 		"""Prune the GMM. Alters model state.
 		  Based on Table 2 from Vo and Ma paper."""
 		# Truncation is easy

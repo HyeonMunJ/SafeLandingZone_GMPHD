@@ -296,6 +296,7 @@ class SLZ_detection:
         center_2, idx_2 = self.estimate_SLZ(conv_image_2, 2, image, crop_num, dim_grid, param_state)
         
         state_vector = deepcopy(center_1)
+        idx_vector = deepcopy(idx_1)
         iter = 3
         for _ in range(2):
         # while True:
