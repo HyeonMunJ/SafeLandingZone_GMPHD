@@ -35,6 +35,7 @@ class Main_GMPHD:
         self.i = 0
 
         self.image_data = None
+        self.msg_data = None
         rospy.Subscriber("/camera/color/image_raw", Image, self.save_image)
 
         rospy.Subscriber("custom/slz_point/states", Float32MultiArray, self.save_slz)
@@ -53,6 +54,7 @@ class Main_GMPHD:
     ######################################################################################################
     def save_idx(self, msg):
         msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/3, 3))
+        # self.msg_data = msg_data
         slz_drawing(msg_data, self.image_data, self.i)
         self.i += 1
 
@@ -70,6 +72,7 @@ class Main_GMPHD:
         # if not self.flag_slz_updated:  # to verify that GM-PHD filter works well, let the measurement be fixed
         self.slz_state = [[-data[1], data[0], - data[2], data[3], data[4], data[5]] for data in msg_data]
         # self.flag_slz_updated = True
+        # print('measurements: ', self.slz_state)
         self.flag_slz = True
 
     def save_pose(self, msg):
@@ -156,7 +159,7 @@ class Main_GMPHD:
                         self.weight = weight
                         self.state_ct = pcd_coord_transform(self.pos, est_state)
 
-                        self.slz_record.append([self.state_ct[0], self.state_ct[2], self.state_ct[4]])
+                        # self.slz_record.append([self.state_ct[0], self.state_ct[2], self.state_ct[4]])
 
 
                 # publish best SLZ to main module

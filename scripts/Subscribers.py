@@ -92,8 +92,8 @@ class Subscribers():
         self.m['armed'] = msg.armed
 
     def save_gmphd(self, msg):
-        self.m['est_state'] = msg.data[:6]
-        self.m['weight'] = msg.data[6]
+        self.m['est_state'] = msg.data[:9]
+        self.m['weight'] = msg.data[9]
 
     def save_flag_phd(self, msg):
         self.s['flag_PHD_update'] = msg.data

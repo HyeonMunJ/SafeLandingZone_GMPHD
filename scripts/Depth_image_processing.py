@@ -232,9 +232,12 @@ class SLZ_detection:
         idx_1 = idx_1.tolist()
         idx_2 = idx_2.tolist()
 
-        if len(center_index_1):
+        if len(center_index_1) and len(center_index_2):
             state_vector = np.vstack([center_index_1, center_index_2])
             idx_vector = np.vstack([idx_1, idx_2])
+        elif len(center_index_1):
+            state_vector = deepcopy(center_index_1)
+            idx_vector = deepcopy(idx_1)
         else:
             state_vector = deepcopy(center_index_2)
             idx_vector = deepcopy(idx_2)

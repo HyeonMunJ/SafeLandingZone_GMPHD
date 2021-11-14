@@ -13,6 +13,7 @@ from cv_bridge import CvBridge, CvBridgeError
 def pcd_coord_transform(pos, state_vector):
     # (P_t - P_o) + P_o --> P_t
     x, y, z =  state_vector[0] + pos[0], state_vector[2] + pos[1], state_vector[4] + pos[2]
+    # doesnot have to consider rotation?
     state_vector[0], state_vector[2], state_vector[4] = x, y, z
     return state_vector
 
@@ -91,9 +92,9 @@ def create_H():
 def create_H_star():
     H_star = np.array([[1, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
-                    [0, 0, 1,  0, 0, 0],
+                    [0, 1, 0,  0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0],
+                    [0, 0, 1, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 1, 0, 0],
                     [0, 0, 0, 0, 1, 0],
@@ -167,6 +168,25 @@ def slz_plot(list_state):
 '''
 
 def slz_drawing(list_idx, image_msg, i):
+    cv_bridge = CvBridge()
+    try:
+        cv_image = cv_bridge.imgmsg_to_cv2(image_msg, "bgr8")
+    except CvBridgeError as e:
+        print(e)
+
+    if np.array(list_idx).ndim == 1:
+        list_idx = [list_idx]
+    for element_idx in list_idx:
+        if element_idx[2] > 0:
+            cv2.circle(cv_image, (int(element_idx[1]), int(element_idx[0])), int(element_idx[2]), (255, 255, 255), 2)
+    # cv2.imshow('circled SLZ', cv_image)
+    dr = '/home/lics-hm/Documents/data/experiment_figure/circled_image/1112-5/sample_image_%d.jpg' %i
+    # cv2.imwrite(dr, cv_image)
+    cv2.imshow('circled image', cv_image)
+    cv2.waitKey(0)
+
+
+def slz_show(list_idx, image_msg, i, best_slz, ctrl):
     cv_bridge = CvBridge()
     try:
         cv_image = cv_bridge.imgmsg_to_cv2(image_msg, "bgr8")

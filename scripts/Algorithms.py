@@ -14,7 +14,7 @@ def ctrl(c, q, phase, pos_default):
         e_tot = np.linalg.norm([e_x, e_y, e_z])
         # if total distance to the target exceeds 3m, move at the constant velocity
         # if e_tot > 1:
-        v_tot = 1
+        v_tot = 1.5
         v_x_cmd = e_x / e_tot * v_tot
         v_y_cmd = e_y / e_tot * v_tot
         v_z_cmd = e_z / e_tot * v_tot
@@ -33,7 +33,7 @@ def ctrl(c, q, phase, pos_default):
         e_hor_1 = np.linalg.norm([e_x_1, e_y_1])
 
         if e_hor_1 > 1:
-            v_tot = 1
+            v_tot = 1.
             v_x_cmd = e_x_1 / e_hor_1 * v_tot
             v_y_cmd = e_y_1 / e_hor_1 * v_tot
             v_z_cmd = e_z_1
