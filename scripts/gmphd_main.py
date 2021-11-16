@@ -5,7 +5,7 @@ import time
 from tf.transformations import euler_from_quaternion
 
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray, Bool
+from std_msgs.msg import Float32MultiArray, Bool, Float32
 from geometry_msgs.msg import PoseStamped, TwistStamped
 # from main import q, s, m, p, f
 # from Algorithms import *
@@ -23,6 +23,7 @@ class Main_GMPHD:
         self.flag_score = False # flag for initializing max_score when the height level is changed
         self.flag_slz = False # flag indicating that slz state is recently updated(subscribed)
         self.flag_slz_updated = False 
+        self.flag_reinit = False
         self.g = None
         self.weight = 0.
         # self.est_state = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])
@@ -30,20 +31,23 @@ class Main_GMPHD:
         self.vel = [0., 0., 0.] # velocity of ownship (NEU?)
         self.att = [0., 0., 0.] # attitude of ownship (rpy)
         self.edge = [0., 0., 0., 0.] # [x_min, x_max, y_min, y_max]
+        self.phase = -1
 
         self.slz_record = []
         self.i = 0
 
         self.image_data = None
         self.msg_data = None
-        rospy.Subscriber("/camera/color/image_raw", Image, self.save_image)
+        # rospy.Subscriber("/camera/color/image_raw", Image, self.save_image)
 
         rospy.Subscriber("custom/slz_point/states", Float32MultiArray, self.save_slz)
         rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.save_pose)
         rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, self.save_vel)
         rospy.Subscriber("/custom/flag_main", Bool, self.save_flag_main)
         rospy.Subscriber("/custom/flag_score", Bool, self.save_flag_score)
+        rospy.Subscriber("/custom/flag_reinit", Bool, self.save_flag_reinit)
         rospy.Subscriber("/custom/slz_point/edge", Float32MultiArray, self.save_edge)
+        rospy.Subscriber("custom/phase", Float32, self.save_phase)
         # rospy.Subscriber("/custom/slz_point/idxs", Float32MultiArray, self.save_idx)
 
         self.pub_gmphd = rospy.Publisher('/custom/gmphd/result', Float32MultiArray, queue_size=2)
@@ -52,6 +56,9 @@ class Main_GMPHD:
     ######################################################################################################
     ##################################### Callback for subscribe #########################################
     ######################################################################################################
+    def save_phase(self, msg):
+        self.phase = msg.data
+
     def save_idx(self, msg):
         msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/3, 3))
         self.msg_data = msg_data
@@ -97,6 +104,9 @@ class Main_GMPHD:
         vz = msg.twist.linear.z
         self.vel = [vx, vy, vz]
 
+    def save_flag_reinit(self, msg):
+        self.flag_reinit = msg.data
+
     def save_flag_main(self, msg):
         self.flag_main_init = msg.data
 
@@ -125,6 +135,11 @@ class Main_GMPHD:
     ######################################################################################################
 
     def main(self, max_score, dt):
+        if self.flag_reinit:
+            del self.g
+            self.g = init_PHD(self.pos, self.vel)
+            self.flag_PHD_init = True
+
         # if the PHD filter is permitted to init from main script and it is not initialized yet
         if self.flag_main_init and not self.flag_PHD_init:
             self.g = init_PHD(self.pos, self.vel)
@@ -189,6 +204,8 @@ if __name__ == '__main__':
     time_1 = time.time()
     time_2 = time.time()
 
+    max_score = -10000.
+
     while not rospy.is_shutdown():
         # initialize max score when the flag_score is changed since the scenario level is change in the main script
         if main_gmphd.flag_score: # cannot be applied properly
@@ -198,7 +215,8 @@ if __name__ == '__main__':
         dt = time_2 - time_1
         time_1 = time.time()
         # execute main function of gmphd once
-        score = main_gmphd.main(max_score, dt)
+        if main_gmphd.phase != -1:
+            score = main_gmphd.main(max_score, dt)
         time_2 = time.time()
 
         # update the max score

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+from numpy import float32
 import rospy
 from geometry_msgs.msg import Twist, Point
 from mavros_msgs.msg import MountControl
 from mavros_msgs.msg import MountControl, PositionTarget
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Float32
 # from visualization_msgs.msg import Marker
 # import math
 
@@ -15,8 +16,21 @@ class Publishers():
         self.pub_cmd_sp = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=2)
         self.pub_flag_main = rospy.Publisher('/custom/flag_main', Bool, queue_size=2)
         self.pub_flag_score = rospy.Publisher('/custom/flag_score', Bool, queue_size=2)
+        self.pub_flag_reinit = rospy.Publisher('/custom/flag_reinit', Bool, queue_size=2)
+        self.pub_phase = rospy.Publisher('custom/phase', Float32, queue_size=2)
         # self.pub_state_helipad = rospy.Publisher('helipad_marker', Marker, queue_size=2)
         # self.pub_state_ownship = rospy.Publisher('ownship_marker', Marker, queue_size=2)
+
+    def assign_flag_reinit(self, flag):
+        msg = Bool()
+        msg.data = flag
+
+        return msg
+
+    def assign_phase(self, s):
+        msg = Float32()
+        msg.data = s['phase']
+        return msg
 
     def assign_cmd_vel(self, c):
         msg = Twist()

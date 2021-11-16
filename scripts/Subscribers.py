@@ -28,8 +28,8 @@ class Subscribers():
         # Subscriber
         rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.save_pose)
         rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, self.save_vel)
-        rospy.Subscriber("/mavros/px4flow/ground_distance", Range, self.save_LRF)
-        rospy.Subscriber("/target_pixel", PointStamped, self.save_target_pixel)
+        # rospy.Subscriber("/mavros/px4flow/ground_distance", Range, self.save_LRF)
+        # rospy.Subscriber("/target_pixel", PointStamped, self.save_target_pixel)
         rospy.Subscriber("/camera/depth/image_raw", Image, self.save_depth_image)
         # rospy.Subscriber("custom/slz_point/states", Float32MultiArray, self.save_slz)
         rospy.Subscriber("/mavros/state", State, self.save_state)

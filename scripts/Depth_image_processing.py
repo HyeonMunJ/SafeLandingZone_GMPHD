@@ -302,7 +302,7 @@ class SLZ_detection:
         idx_vector = deepcopy(idx_1)
         iter = 3
         for _ in range(2):
-        # while True:
+            # while True:
             if len(center_2):
                 state_vector, idx_vector = self.calc_state_vector(center_1, center_2, idx_1, idx_2)
                 

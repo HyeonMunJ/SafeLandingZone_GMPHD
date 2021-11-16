@@ -176,6 +176,7 @@ class status:
         self.flag_PHD_init = False # checker for KF initiation
         self.flag_score_init = False
         self.flag_PHD_update = False
+        self.flag_reinit = False
 
     def __getitem__(self, key):
         return getattr(self, key)

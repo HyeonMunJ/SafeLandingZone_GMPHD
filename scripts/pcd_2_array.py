@@ -4,7 +4,7 @@
 
 import numpy as np
 from sensor_msgs.msg import PointCloud2, PointField
-from std_msgs.msg import Float32MultiArray, MultiArrayDimension
+from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Float32
 import numpy as np
 import rospy
 import time
@@ -17,11 +17,13 @@ class Pcd_2_array:
         rospy.init_node('test_pcd')
         # rospy.Subscriber("point_cloud_transformed", PointCloud2, self.test)
         rospy.Subscriber("/camera/depth/points", PointCloud2, self.test)
+        rospy.Subscriber("custom/phase", Float32, self.save_phase)
         self.pub_slz = rospy.Publisher('/custom/slz_point/states', Float32MultiArray, queue_size=2)
         self.pub_edge = rospy.Publisher('/custom/slz_point/edge', Float32MultiArray, queue_size=2)
         self.pub_idx = rospy.Publisher('/custom/slz_point/idxs', Float32MultiArray, queue_size=2)
 
         self.i = 0
+        self.phase = -1
         self.DUMMY_FIELD_PREFIX = DUMMY_FIELD_PREFIX
         self.pftype_to_nptype = pftype_to_nptype
         self.pftype_sizes = pftype_sizes
@@ -29,29 +31,33 @@ class Pcd_2_array:
         self.slz_detection = SLZ_detection()
 
     def test(self, pcd):
-        print('******************************')
-        converted_pcd = self.pointcloud2_to_array(pcd, squeeze=False)
+        if self.phase != -1:
+            print('******************************')
+            converted_pcd = self.pointcloud2_to_array(pcd, squeeze=False)
 
-        pcd_array = rf.structured_to_unstructured(converted_pcd)
+            pcd_array = rf.structured_to_unstructured(converted_pcd)
 
-        # dr = '/home/lics-hm/Documents/data/slz_pcd/pcd_array_%d' % self.i
-        # np.save(dr, pcd_array)
+            # dr = '/home/lics-hm/Documents/data/slz_pcd/pcd_array_%d' % self.i
+            # np.save(dr, pcd_array)
 
-        # pcd array has the information of RGBD
-        self.slz_detection.det_SLZ(pcd_array[:,:,:3])
-        state_slz = self.slz_detection.best_SLZ
+            # pcd array has the information of RGBD
+            self.slz_detection.det_SLZ(pcd_array[:,:,:3])
+            state_slz = self.slz_detection.best_SLZ
 
-        # dr_2 = '/home/lics-hm/Documents/data/slz_pcd/state_slz_%d' % self.i
-        # np.save(dr_2, state_slz)
+            # dr_2 = '/home/lics-hm/Documents/data/slz_pcd/state_slz_%d' % self.i
+            # np.save(dr_2, state_slz)
 
-        print('num of slz : ', len(state_slz))
-        if len(state_slz):
-            msg_slz = self.assign_state_slz(state_slz)
-            msg_edge = self.assign_state_edge(self.slz_detection.image_region)
-            msg_idx = self.assign_state_idx(self.slz_detection.best_idx)
-            self.pub_slz.publish(msg_slz)
-            self.pub_edge.publish(msg_edge)
-            self.pub_idx.publish(msg_idx)
+            print('num of slz : ', len(state_slz))
+            if len(state_slz):
+                msg_slz = self.assign_state_slz(state_slz)
+                msg_edge = self.assign_state_edge(self.slz_detection.image_region)
+                msg_idx = self.assign_state_idx(self.slz_detection.best_idx)
+                self.pub_slz.publish(msg_slz)
+                self.pub_edge.publish(msg_edge)
+                self.pub_idx.publish(msg_idx)
+
+    def save_phase(self, msg):
+        self.phase = msg.data
 
     # converts_to_numpy(PointField, plural=True)
     def fields_to_dtype(self, fields, point_step):
