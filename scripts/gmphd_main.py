@@ -54,8 +54,8 @@ class Main_GMPHD:
     ######################################################################################################
     def save_idx(self, msg):
         msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/3, 3))
-        # self.msg_data = msg_data
-        slz_drawing(msg_data, self.image_data, self.i)
+        self.msg_data = msg_data
+        # slz_drawing(msg_data, self.image_data, self.i)
         self.i += 1
 
     def save_image(self, image_data):

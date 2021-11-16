@@ -78,13 +78,11 @@ while not rospy.is_shutdown():
         # state_vector = sub.slz_state
         # state_ct = pcd_coord_transform(q, state_vector)
 
-        if s['phase'] != 0:
+        if s['phase'] != -1:
             # initialize the PHD filter
             if s['flag_PHD_init'] == False:
                 print('start landing procedure!!!')
                 s['flag_PHD_init'] = True
-                msg_flag_main = pub.assign_flag_main(s['flag_PHD_init'])
-                pub.pub_flag_main.publish(msg_flag_main)
 
             # update the PHD filter and max score zone
             elif s['flag_PHD_init'] and s['flag_PHD_update']:
@@ -94,17 +92,20 @@ while not rospy.is_shutdown():
                 print('best zone : ', float(q['x_t']), float(q['y_t']), float(q['z_t']))
                 print('phase : ', s['phase'], 'ownship height : ', q['z_o'])
             
+    msg_flag_main = pub.assign_flag_main(s['flag_PHD_init'])
+    pub.pub_flag_main.publish(msg_flag_main)
+
     msg_flag_score = pub.assign_flag_score(s['flag_score_init'])
     pub.pub_flag_score.publish(msg_flag_score)
-    if s['flag_score_init']:
-        s['flag_score_init'] = False
+    # if s['flag_score_init']:
+    #     s['flag_score_init'] = False
 
     # control
     msg_cmd_mount = pub.assign_cmd_mount()
     pub.pub_cmd_mount.publish(msg_cmd_mount)
 
     if count % (freq / freq_ctrl) == 0:
-        pos_default = scenario.target_pos(T_now - T_0, s, q)
+        pos_default = scenario.target_pos_2(T_now - T_0, s, q)
         c = ctrl(c=c, q=q, phase=s['phase'], pos_default=pos_default)
         msg_cmd_vel = pub.assign_cmd_vel(c)
         pub.pub_cmd_vel.publish(msg_cmd_vel)

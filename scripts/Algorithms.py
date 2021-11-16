@@ -7,6 +7,18 @@ def ctrl(c, q, phase, pos_default):
     # distance values to the target point
 
 
+    if phase == -1: # move to mission place
+        e_x = pos_default[0] - q['x_o']
+        e_y = pos_default[1] - q['y_o']
+        e_z = pos_default[2] - q['z_o']
+        e_tot = np.linalg.norm([e_x, e_y, e_z])
+        # if total distance to the target exceeds 3m, move at the constant velocity
+        # if e_tot > 1:
+        v_tot = 3.
+        v_x_cmd = e_x / e_tot * v_tot
+        v_y_cmd = e_y / e_tot * v_tot
+        v_z_cmd = e_z / e_tot * v_tot
+
     if phase == 0:  # waypoint
         e_x = pos_default[0] - q['x_o']
         e_y = pos_default[1] - q['y_o']
@@ -14,7 +26,7 @@ def ctrl(c, q, phase, pos_default):
         e_tot = np.linalg.norm([e_x, e_y, e_z])
         # if total distance to the target exceeds 3m, move at the constant velocity
         # if e_tot > 1:
-        v_tot = 1.5
+        v_tot = 1.
         v_x_cmd = e_x / e_tot * v_tot
         v_y_cmd = e_y / e_tot * v_tot
         v_z_cmd = e_z / e_tot * v_tot

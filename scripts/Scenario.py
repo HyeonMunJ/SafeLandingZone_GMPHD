@@ -11,7 +11,7 @@ class Scenario():
         # self.timeline = np.array([0,20,40,60, 100])
         # self.timeline = np.array([0,20,40,60, 100])
         # self.timeline = np.array([0,30,60,90,110])
-        self.timeline = np.array([0,30,100,170,190])
+        self.timeline = np.array([0,20,50,120,130])
 
         self.N_wp = np.shape(self.timeline)[0]
         self.goal = np.zeros((self.N_wp,3))
@@ -51,3 +51,20 @@ class Scenario():
             pass
         return self.goal[idx]
 
+    def target_pos_2(self, T, s, q):
+        idx = np.argmax(np.where(self.timeline<=T))
+        if idx < 2:
+            # change phase
+            s['phase'] = -1
+            # s['flag_score_init'] = True
+        elif idx == 2:
+            s['flag_score_init'] = True
+            s['phase'] = 0
+        elif self.record_idx != idx:
+            s['flag_score_init'] = True
+            s['phase'] = 2
+            self.record_idx = idx
+        elif abs(self.goal[idx][2] - q['z_o']) < 1.:
+            s['flag_score_init'] = True
+            s['phase'] = 1
+        return self.goal[idx]
