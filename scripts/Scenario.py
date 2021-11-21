@@ -11,13 +11,15 @@ class Scenario():
         # self.timeline = np.array([0,20,40,60, 100])
         # self.timeline = np.array([0,20,40,60, 100])
         # self.timeline = np.array([0,30,60,90,110])
-        self.timeline = np.array([0,20,50,120,130,140])
+        # self.timeline = np.array([0,20,50,120,140,150])
+        self.timeline = np.array([0,20,35,70,90,100])
+
 
         self.N_wp = np.shape(self.timeline)[0]
         self.goal = np.zeros((self.N_wp,3))
         self.goal[0] = [0,0,30]
         # self.goal[1] = [0,0,30]
-        self.goal[1] = [50,-50,30]
+        self.goal[1] = [25,-25,30]
         self.goal[2] = [0,0,30]
         self.goal[3] = [0,0,20]
         self.goal[4] = [0,0,10]
@@ -40,6 +42,8 @@ class Scenario():
         self.record_idx = 1
         self.time_step = 0
 
+        self.flag_record = False
+
 
     def target_pos(self, T, s, q):
         idx = np.argmax(np.where(self.timeline<=T))
@@ -54,11 +58,11 @@ class Scenario():
             pass
         return self.goal[idx]
 
-    def target_pos_2(self, T, s, q):
-        if T > (self.time_step +1) * 150:
+    def target_pos_2(self, T, s, q, m):
+        if T > (self.time_step +1) * 100:
             self.time_step += 1
             s['flag_reinit'] = True
-        loop_time = T - self.time_step * 150
+        loop_time = T - self.time_step * 100
         
         idx = np.argmax(np.where(self.timeline<=loop_time))
         if idx < 2:
@@ -70,10 +74,19 @@ class Scenario():
             s['flag_score_init'] = False
             s['phase'] = 0
         elif self.record_idx != idx:
-            s['flag_score_init'] = True
+            s['flag_score_init'] = False
             s['phase'] = 2
             self.record_idx = idx
-        elif abs(self.goal[idx][2] - q['z_o']) < 1.: # case 잘 나뉘는지 확인
+        elif abs(self.goal[idx][2] - q['z_o']) < 1.: # case check
             s['flag_score_init'] = False
             s['phase'] = 1
+
+                
+        if not self.flag_record and s['flag_PHD_init'] and idx >= 3:
+            with open("/home/lics-hm/Documents/data/experiment_data/target_position/slz_position_3.txt", "a+") as file:
+                file.write("x = %f, v_x = %f, y = %f, v_y = %f, z = %f, v_z = %f, r = %f, alpha = %f, ri = %f, score = %f\n" \
+                    %(float(m['est_state'][0]), float(m['est_state'][1]), float(m['est_state'][2]), float(m['est_state'][3]), float(m['est_state'][4]),\
+                        float(m['est_state'][5]), float(m['est_state'][6]), float(m['est_state'][7]), float(m['est_state'][8]), float(m['score'])))
+            self.flag_record = True
         return self.goal[idx]
+        

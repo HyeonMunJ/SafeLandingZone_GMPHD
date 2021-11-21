@@ -6,7 +6,7 @@ import numpy as np
 
 from sensor_msgs.msg import Range, Imu, Image
 from geometry_msgs.msg import PoseStamped, TwistStamped, PointStamped
-from std_msgs.msg import Float32MultiArray, Bool
+from std_msgs.msg import Float32MultiArray, Bool, Float32
 from mavros_msgs.msg import State
 
 from tf.transformations import euler_from_quaternion
@@ -35,6 +35,7 @@ class Subscribers():
         rospy.Subscriber("/mavros/state", State, self.save_state)
         rospy.Subscriber('/custom/gmphd/result', Float32MultiArray, self.save_gmphd)
         rospy.Subscriber('/custom/flag_phd', Bool, self.save_flag_phd)
+        rospy.Subscriber('/custom/gmphd/score', Float32, self.save_gmphd_score)
 
         # rospy.Subscriber('/mavros/imu/data', Imu, self.save_imu)
 
@@ -98,6 +99,8 @@ class Subscribers():
     def save_flag_phd(self, msg):
         self.s['flag_PHD_update'] = msg.data
 
+    def save_gmphd_score(self, msg):
+        self.m['score'] = msg.data
 '''
 class TransformPointCloud:
     def __init__(self):

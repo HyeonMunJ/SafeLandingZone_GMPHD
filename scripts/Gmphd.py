@@ -123,7 +123,7 @@ g.gmm
 		# classify measurements into meas from birth targets and meas from surviving targets
 		obs_b = []
 		obs_s = []
-		T_s = 5 # threshold 
+		T_s = 3 # threshold 
 
 		for obs in obs_set:
 			flag_inside = False

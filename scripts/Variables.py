@@ -74,6 +74,7 @@ class meas_state:
         # (ned)
         self.est_state = None
         self.weight = None
+        self.score = 0.
 
         # std of meas
         self.z_std_vis = 50.

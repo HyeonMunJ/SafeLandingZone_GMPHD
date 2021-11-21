@@ -105,7 +105,7 @@ while not rospy.is_shutdown():
     pub.pub_cmd_mount.publish(msg_cmd_mount)
 
     if count % (freq / freq_ctrl) == 0:
-        pos_default = scenario.target_pos_2(T_now - T_0, s, q)
+        pos_default = scenario.target_pos_2(T_now - T_0, s, q, m)
         c = ctrl(c=c, q=q, phase=s['phase'], pos_default=pos_default)
         msg_flag_reinit = pub.assign_flag_reinit(s['flag_reinit'])
         msg_phase = pub.assign_phase(s)

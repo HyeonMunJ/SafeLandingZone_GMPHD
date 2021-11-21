@@ -23,7 +23,6 @@ class Main_GMPHD:
         self.flag_score = False # flag for initializing max_score when the height level is changed
         self.flag_slz = False # flag indicating that slz state is recently updated(subscribed)
         self.flag_slz_updated = False 
-        self.flag_reinit = False
         self.g = None
         self.weight = 0.
         # self.est_state = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])
@@ -45,13 +44,13 @@ class Main_GMPHD:
         rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, self.save_vel)
         rospy.Subscriber("/custom/flag_main", Bool, self.save_flag_main)
         rospy.Subscriber("/custom/flag_score", Bool, self.save_flag_score)
-        rospy.Subscriber("/custom/flag_reinit", Bool, self.save_flag_reinit)
         rospy.Subscriber("/custom/slz_point/edge", Float32MultiArray, self.save_edge)
         rospy.Subscriber("custom/phase", Float32, self.save_phase)
         # rospy.Subscriber("/custom/slz_point/idxs", Float32MultiArray, self.save_idx)
 
         self.pub_gmphd = rospy.Publisher('/custom/gmphd/result', Float32MultiArray, queue_size=2)
         self.pub_gmphd_flag = rospy.Publisher('/custom/flag_phd', Bool, queue_size=2)
+        self.pub_score = rospy.Publisher('/custom/gmphd/score', Float32, queue_size=2)
 
     ######################################################################################################
     ##################################### Callback for subscribe #########################################
@@ -104,9 +103,6 @@ class Main_GMPHD:
         vz = msg.twist.linear.z
         self.vel = [vx, vy, vz]
 
-    def save_flag_reinit(self, msg):
-        self.flag_reinit = msg.data
-
     def save_flag_main(self, msg):
         self.flag_main_init = msg.data
 
@@ -129,17 +125,16 @@ class Main_GMPHD:
         msg.data = flag
         return msg
 
+    def assign_gmphd_score(self, score):
+        msg = Float32()
+        msg.data = score
+        return msg
 
     ######################################################################################################
     ############################################# Main ###################################################
     ######################################################################################################
 
     def main(self, max_score, dt):
-        if self.flag_reinit:
-            del self.g
-            self.g = init_PHD(self.pos, self.vel)
-            self.flag_PHD_init = True
-
         # if the PHD filter is permitted to init from main script and it is not initialized yet
         if self.flag_main_init and not self.flag_PHD_init:
             self.g = init_PHD(self.pos, self.vel)
@@ -179,7 +174,9 @@ class Main_GMPHD:
 
                 # publish best SLZ to main module
                 msg_state = self.assign_gmphd_result(self.state_ct, self.weight)
+                msg_score = self.assign_gmphd_score(max_score)
                 self.pub_gmphd.publish(msg_state)
+                self.pub_score.publish(msg_score)
 
                 if not self.flag_phd_done:
                     self.flag_phd_done = True
@@ -192,12 +189,11 @@ class Main_GMPHD:
 
         return max_score
 
-
 if __name__ == '__main__':
     rospy.init_node('gmphd')
-
-    # freq = 5. # p['freq_est']
-    # rate = rospy.Rate(freq)
+    
+    freq = 5. # p['freq_est']
+    rate = rospy.Rate(freq)
 
     main_gmphd = Main_GMPHD()
     max_score = -10000.
@@ -217,9 +213,10 @@ if __name__ == '__main__':
         # execute main function of gmphd once
         if main_gmphd.phase != -1:
             score = main_gmphd.main(max_score, dt)
+            if score > max_score:
+                max_score = score
         time_2 = time.time()
 
         # update the max score
-        if score > max_score:
-            max_score = score
-        # rate.sleep()
+
+        rate.sleep()
