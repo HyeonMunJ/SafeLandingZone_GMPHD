@@ -90,7 +90,7 @@ while not rospy.is_shutdown():
                 q['x_t'], q['y_t'], q['z_t'] = m['est_state'][0], m['est_state'][2], m['est_state'][4]
 
                 print('best zone : ', float(q['x_t']), float(q['y_t']), float(q['z_t']))
-                print('phase : ', s['phase'], 'ownship height : ', q['z_o'])
+                print('phase : ', s['phase']) # , 'ownship height : ', q['z_o'])
             
     msg_flag_main = pub.assign_flag_main(s['flag_PHD_init'])
     pub.pub_flag_main.publish(msg_flag_main)

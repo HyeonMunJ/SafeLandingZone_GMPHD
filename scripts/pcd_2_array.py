@@ -48,6 +48,7 @@ class Pcd_2_array:
             # np.save(dr_2, state_slz)
 
             print('num of slz : ', len(state_slz))
+            # print('list of slz : ', state_slz)
             if len(state_slz):
                 msg_slz = self.assign_state_slz(state_slz)
                 msg_edge = self.assign_state_edge(self.slz_detection.image_region)

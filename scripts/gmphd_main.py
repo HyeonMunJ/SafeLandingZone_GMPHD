@@ -77,6 +77,8 @@ class Main_GMPHD:
         msg_data = np.reshape(msg.data, (np.shape(msg.data)[0]/6, 6))
         # if not self.flag_slz_updated:  # to verify that GM-PHD filter works well, let the measurement be fixed
         self.slz_state = [[-data[1], data[0], - data[2], data[3], data[4], data[5]] for data in msg_data]
+        # self.slz_state = [[data[0], data[1], - data[2], data[3], data[4], data[5]] for data in msg_data]
+
         # self.flag_slz_updated = True
         # print('measurements: ', self.slz_state)
         self.flag_slz = True
@@ -168,8 +170,10 @@ class Main_GMPHD:
 
                         self.weight = weight
                         self.state_ct = pcd_coord_transform(self.pos, est_state)
+                        print('ct_state: ', self.state_ct)
 
                         # self.slz_record.append([self.state_ct[0], self.state_ct[2], self.state_ct[4]])
+                print('uav pose : ', self.pos)
 
 
                 # publish best SLZ to main module

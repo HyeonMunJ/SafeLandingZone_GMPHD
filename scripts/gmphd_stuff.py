@@ -19,17 +19,18 @@ def pcd_coord_transform(pos, state_vector):
 
 def calc_score(weight, loc):
     # calculate the score of each SLZ candidates
-    coeff_weight = 20. # weight, which should be normalized
-    coeff_dist = - 0.07 * 0.2 # distance from ownship to SLZ
-    coeff_slope = -5. # slope of SLZ
-    coeff_ri = -20. # roughness index of SLZ
+    # coeff_weight = 20. # weight, which should be normalized
+    # coeff_dist = - 0.07 * 0.2 # distance from ownship to SLZ
+    coeff_slope = -1. # slope of SLZ
+    coeff_ri = -4. # roughness index of SLZ
 
     # dist = np.linalg.norm([loc[0], loc[2], loc[4]])
-    dist = np.linalg.norm([loc[0], loc[2]]) # horizontal distance?
+    # dist = np.linalg.norm([loc[0], loc[2]]) # horizontal distance?
     # print('weight: ', weight, 'dist: ', dist, 'slope: ', loc[7], 'ri: ', loc[8])
     if len(loc):
         # score = (c1 * weight) + (c2 * distance btw uav and target) + (c3 * slope) + (c4 * roughness index)
-        score = coeff_weight * weight + coeff_dist * dist + coeff_slope * loc[7] + coeff_ri * loc[8]
+        # score = coeff_weight * weight + coeff_dist * dist + coeff_slope * loc[7] + coeff_ri * loc[8]
+        score = coeff_slope * loc[7] + coeff_ri * loc[8]
     else:
         score = -10000.
         print('loc is empty')
