@@ -64,28 +64,28 @@ def sampleGm(complist):
 ################################################################################
 class Gmphd:
 	"""Represents a set of modelling parameters and the latest frame's
-	   GMM estimate, for a GM-PHD model without spawning.
-	   
-	   Typical usage would be, for each frame of input data, to run:
-	      g.update(obs)
-	      g.prune()
-	      estimate = g.extractstates()
-	   
-	  'gmm' is an array of GmphdComponent items which makes up
-		   the latest GMM, and updated by the update() call. 
-		   It is initialised as empty.
+		GMM estimate, for a GM-PHD model without spawning.
 
-	Test code example (1D data, with new trails expected at around 100):
-from gmphd import *
-g = Gmphd([GmphdComponent(1, [100], [[10]])], 0.9, 0.9, [[1]], [[1]], [[1]], [[1]], 0.000002)
-g.update([[30], [67.5]])
-g.gmmplot1d()
-g.prune()
-g.gmmplot1d()
+		Typical usage would be, for each frame of input data, to run:
+			g.update(obs)
+			g.prune()
+			estimate = g.extractstates()
 
-g.gmm
+		'gmm' is an array of GmphdComponent items which makes up
+			the latest GMM, and updated by the update() call. 
+			It is initialised as empty.
 
-[(float(comp.loc), comp.weight) for comp in g.gmm]
+			Test code example (1D data, with new trails expected at around 100):
+		from gmphd import *
+		g = Gmphd([GmphdComponent(1, [100], [[10]])], 0.9, 0.9, [[1]], [[1]], [[1]], [[1]], 0.000002)
+		g.update([[30], [67.5]])
+		g.gmmplot1d()
+		g.prune()
+		g.gmmplot1d()
+
+		g.gmm
+
+		[(float(comp.loc), comp.weight) for comp in g.gmm]
 	"""
 	
 	def __init__(self, survival, detection, f, q, h, r, clutter, birthgmm, h_star):
